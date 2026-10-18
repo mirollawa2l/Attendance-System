@@ -1,61 +1,286 @@
-<!DOCTYPE html><html><head><base target="_top"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Scouts QR</title>
-<style>body{font:16px system-ui;margin:0;padding:8px;max-width:640px;margin:auto}nav{display:flex;flex-wrap:wrap;gap:4px}button{padding:10px 12px;font-size:16px;border:0;border-radius:6px;background:#1a56db;color:#fff}button.sec{background:#666}button:disabled{opacity:.5}
-select,input,textarea{width:100%;box-sizing:border-box;padding:10px;font-size:16px;margin:4px 0}input[type=checkbox]{width:auto}label{display:block;margin-top:8px;font-weight:600}.row{padding:10px;border-bottom:1px solid #ddd}#msg{padding:8px;margin:6px 0;border-radius:6px}.ok{background:#d1fae5}.bad{background:#fee2e2;color:#991b1b}#reader{width:100%}</style></head><body>
-<nav id=nav></nav><div id=msg></div><div id=v>Loading…</div>
-<script src="https://cdnjs.cloudflare.com/ajax/libs/html5-qrcode/2.3.8/html5-qrcode.min.js"></script>
-<script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
+<!DOCTYPE html><html lang="en"><head><base target="_top"><meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover"><meta name="theme-color" content="#123b4a"><title>Morshedat · Son of Thunder</title>
+<style>
+:root{color-scheme:light;--bg:#f1f8f2;--surface:#fff;--ink:#173c2c;--muted:#5d7666;--line:#d7e8da;--brand:#237447;--brand-dark:#185b35;--brand-soft:#e5f4e8;--accent:#8fcf9a;--success:#18794e;--danger:#b42318;--shadow:0 10px 28px #174b2a14}
+*{box-sizing:border-box}body{min-height:100vh;margin:0;padding:env(safe-area-inset-top) 0 env(safe-area-inset-bottom);background:var(--bg);color:var(--ink);font:16px/1.5 system-ui,"Segoe UI",sans-serif}
+.app-header{display:flex;align-items:center;gap:14px;max-width:980px;margin:auto;padding:22px 18px 16px}.brand-mark{display:grid;flex:0 0 52px;width:52px;height:52px;place-items:center;border-radius:16px;background:var(--brand);color:#fff;font-weight:800}
+.eyebrow{margin:0 0 2px;color:var(--muted);font-size:10px;font-weight:800;letter-spacing:.15em}h1{margin:0;color:var(--brand-dark);font-size:clamp(20px,5vw,27px);line-height:1.2}.header-copy{margin:4px 0 0;color:var(--muted);font-size:13px}
+nav{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:8px;max-width:980px;margin:0 auto;padding:8px 16px 12px;border-bottom:1px solid var(--line);background:transparent}
+button{width:auto;min-height:42px;padding:9px 12px;border:1px solid #d1e6d5;border-radius:11px;background:var(--brand);color:#fff;font:inherit;font-weight:650;cursor:pointer;overflow-wrap:anywhere}button:hover{background:var(--brand-dark)}button:disabled{opacity:.55;cursor:not-allowed}button.sec{background:var(--brand-soft);color:var(--brand-dark)}nav button{width:100%;min-width:0;min-height:42px;padding:8px 5px;background:#e5f4e8;color:var(--brand-dark);font-size:14px}nav button.on,nav button:focus-visible{background:var(--brand);color:#fff}
+main{max-width:980px;margin:auto;padding:18px 16px 36px}input,select,textarea{width:100%;min-height:44px;margin:5px 0;padding:10px 12px;border:1px solid var(--line);border-radius:10px;background:var(--surface);color:var(--ink);font:inherit}input:focus,select:focus,textarea:focus{outline:3px solid #39845a2e;border-color:#39845a}input[type=checkbox]{width:auto;min-height:auto;accent-color:var(--brand)}label{display:block;margin-top:12px;font-weight:700}h3,h4{color:var(--brand-dark)}
+.camera-card{width:100%;margin:auto}.camera-frame{position:relative;display:grid;width:100%;max-width:560px;aspect-ratio:4/4.1;max-height:min(62vh,560px);min-height:240px;margin:auto;overflow:hidden;place-items:center;border:3px solid #cde5d1;border-radius:22px;background:#102d1c;box-shadow:var(--shadow)}.camera-frame video{display:block;width:100%;height:100%;object-fit:cover}.camera-frame.scanned{border-color:#41c77a;box-shadow:0 0 0 5px #41c77a33,var(--shadow)}
+.scan-guide{position:absolute;top:50%;left:50%;width:min(58vw,230px);aspect-ratio:1;border:2px solid #ffffffdf;border-radius:22px;box-shadow:0 0 0 999px #0000001a;pointer-events:none;transform:translate(-50%,-50%)}.camera-caption{margin:11px 4px 0;color:var(--muted);text-align:center;font-size:13px}
+.scan-options{display:flex;flex-wrap:wrap;justify-content:center;gap:10px;margin-top:12px}.status-card{margin:18px 0;padding:14px 16px;border:1px solid var(--line);border-radius:16px;background:var(--surface);box-shadow:0 5px 18px #174b2a08}.connection-row{display:flex;align-items:center;gap:9px;font-size:13px;font-weight:800}.connection-dot{width:10px;height:10px;border-radius:50%;background:#94a3a8}.connection-dot.online{background:#21a366;box-shadow:0 0 0 4px #21a36622}.connection-dot.offline{background:#d97706;box-shadow:0 0 0 4px #d9770622}#connection-state,#msg{color:var(--muted)}#msg{margin:10px 0 0;font-size:14px}
+.toast{position:fixed;z-index:5;right:16px;bottom:calc(18px + env(safe-area-inset-bottom));left:16px;width:fit-content;max-width:min(500px,calc(100vw - 32px));margin:auto;padding:12px 18px;border-radius:12px;background:var(--success);box-shadow:var(--shadow);color:#fff;font-weight:700;opacity:0;pointer-events:none;transform:translateY(12px);transition:opacity .2s ease,transform .2s ease}.toast.show{opacity:1;transform:translateY(0)}.toast.error{background:var(--danger)}.row{padding:12px;border-bottom:1px solid var(--line);background:var(--surface)}.row small{color:var(--muted)}
+.metrics{display:grid;grid-template-columns:repeat(auto-fit,minmax(135px,1fr));gap:10px;margin:14px 0}.metric{padding:13px;border:1px solid var(--line);border-radius:13px;background:var(--surface)}.metric strong{display:block;font-size:23px;color:var(--brand-dark);line-height:1.25}.metric span{font-size:12px;color:var(--muted)}
+.table-wrap{overflow-x:auto;margin:12px 0;border:1px solid var(--line);border-radius:12px;background:var(--surface)}table{width:100%;border-collapse:collapse;min-width:620px;font-size:14px}th,td{padding:9px 10px;text-align:start;border-bottom:1px solid var(--line);vertical-align:top}th{background:var(--brand-soft);color:var(--brand-dark);white-space:nowrap}.pill{display:inline-block;padding:3px 8px;border-radius:999px;background:var(--brand-soft);font-size:12px;font-weight:700}
+@media(max-width:390px){nav{grid-template-columns:repeat(2,minmax(0,1fr));padding-inline:10px}nav button{font-size:13px}main{padding-inline:10px}}
+@media(min-width:600px){.camera-frame{aspect-ratio:16/11}}@media(prefers-reduced-motion:reduce){*,*::before,*::after{transition-duration:.01ms!important}}
+</style>
+<style>
+:root{color-scheme:light;--bg:#f3f7f6;--surface:#fff;--ink:#18323b;--muted:#61757b;--line:#dbe6e3;--brand:#123b4a;--brand-soft:#e6f1ee;--accent:#e3aa54;--success:#18794e;--danger:#b42318;--shadow:0 14px 36px #123b4a1f}
+*{box-sizing:border-box}body{min-height:100vh;margin:0;padding:env(safe-area-inset-top) 0 env(safe-area-inset-bottom);background:var(--bg);color:var(--ink);font:16px/1.5 system-ui,"Segoe UI",sans-serif}
+.app-header{display:flex;align-items:center;gap:14px;max-width:760px;margin:auto;padding:24px 18px 18px}.brand-mark{display:grid;flex:0 0 52px;width:52px;height:52px;place-items:center;border-radius:17px;background:var(--brand);color:#fff;font-weight:800}
+.eyebrow{margin:0 0 2px;color:var(--muted);font-size:10px;font-weight:800;letter-spacing:.15em}h1{margin:0;color:var(--brand);font-size:clamp(20px,5vw,27px);line-height:1.2}.header-copy{margin:4px 0 0;color:var(--muted);font-size:13px}
+nav{position:sticky;z-index:2;top:0;display:flex;gap:8px;overflow-x:auto;padding:9px max(14px,calc((100vw - 724px)/2));border-block:1px solid var(--line);background:#f3f7f6f2;backdrop-filter:blur(12px)}
+button{min-height:44px;padding:10px 15px;border:0;border-radius:12px;background:var(--brand);color:#fff;font:inherit;font-weight:700;cursor:pointer}button:hover{background:#1c5263}button:disabled{opacity:.55;cursor:not-allowed}button.sec{background:var(--brand-soft);color:var(--brand)}nav button{flex:0 0 auto;min-height:38px;padding:7px 13px;background:transparent;color:var(--muted)}nav button.on{background:var(--brand);color:#fff}
+main{max-width:760px;margin:auto;padding:18px 16px 36px}input,select,textarea{width:100%;min-height:46px;margin:5px 0;padding:11px 13px;border:1px solid var(--line);border-radius:12px;background:var(--surface);color:var(--ink);font:inherit}input:focus,select:focus,textarea:focus{outline:3px solid #2274692e;border-color:#398477}input[type=checkbox]{width:auto;min-height:auto;accent-color:var(--brand)}label{display:block;margin-top:12px;font-weight:700}h3,h4{color:var(--brand)}
+.camera-card{width:100%;margin:auto}.camera-frame{position:relative;display:grid;width:100%;max-width:620px;aspect-ratio:4/4.1;max-height:min(62vh,620px);min-height:260px;margin:auto;overflow:hidden;place-items:center;border:3px solid transparent;border-radius:26px;background:#10272c;box-shadow:var(--shadow);transition:border-color .2s ease,box-shadow .2s ease}.camera-frame video{display:block;width:100%;height:100%;object-fit:cover}.camera-frame.scanned{border-color:#41c77a;box-shadow:0 0 0 5px #41c77a33,var(--shadow)}
+.scan-guide{position:absolute;top:50%;left:50%;width:min(58vw,230px);aspect-ratio:1;border:2px solid #ffffffdf;border-radius:24px;box-shadow:0 0 0 999px #0000001a;pointer-events:none;transform:translate(-50%,-50%)}.camera-caption{margin:11px 4px 0;color:var(--muted);text-align:center;font-size:13px}
+.scan-options{display:flex;flex-wrap:wrap;justify-content:center;gap:10px;margin-top:12px}
+.status-card{margin:18px 0;padding:15px 16px;border:1px solid var(--line);border-radius:18px;background:var(--surface);box-shadow:0 5px 18px #123b4a0d}.connection-row{display:flex;align-items:center;gap:9px;font-size:13px;font-weight:800}.connection-dot{width:10px;height:10px;border-radius:50%;background:#94a3a8}.connection-dot.online{background:#21a366;box-shadow:0 0 0 4px #21a36622}.connection-dot.offline{background:#d97706;box-shadow:0 0 0 4px #d9770622}#connection-state,#msg{color:var(--muted)}#msg{margin:10px 0 0;font-size:14px}#msg.success{color:var(--success)}#msg.bad{color:var(--danger)}
+.toast{position:fixed;z-index:5;right:16px;bottom:calc(18px + env(safe-area-inset-bottom));left:16px;width:fit-content;max-width:min(500px,calc(100vw - 32px));margin:auto;padding:12px 18px;border-radius:14px;background:var(--success);box-shadow:var(--shadow);color:#fff;font-weight:700;opacity:0;pointer-events:none;transform:translateY(12px);transition:opacity .2s ease,transform .2s ease}.toast.show{opacity:1;transform:translateY(0)}.toast.error{background:var(--danger)}.row{padding:12px;border-bottom:1px solid var(--line);background:var(--surface)}.row small{color:var(--muted)}
+.metrics{display:grid;grid-template-columns:repeat(auto-fit,minmax(135px,1fr));gap:10px;margin:14px 0}
+.metric{padding:13px;border:1px solid var(--line);border-radius:14px;background:var(--surface)}
+.metric strong{display:block;font-size:23px;color:var(--brand);line-height:1.25}
+.metric span{font-size:12px;color:var(--muted)}
+.table-wrap{overflow-x:auto;margin:12px 0;border:1px solid var(--line);border-radius:12px;background:var(--surface)}
+table{width:100%;border-collapse:collapse;min-width:620px;font-size:14px}th,td{padding:9px 10px;text-align:start;border-bottom:1px solid var(--line);vertical-align:top}th{background:var(--brand-soft);color:var(--brand);white-space:nowrap}
+.pill{display:inline-block;padding:3px 8px;border-radius:999px;background:var(--brand-soft);font-size:12px;font-weight:700}
+@media(min-width:600px){.camera-frame{aspect-ratio:16/11}}@media(prefers-reduced-motion:reduce){*,*::before,*::after{transition-duration:.01ms!important}}
+
+.qr-card-preview{width:min(100%,340px);margin:14px auto;padding:0;background:#fff;border:1px solid #dbe6e3;border-radius:22px;overflow:hidden;box-shadow:0 14px 36px #123b4a1f;text-align:center}.qr-card-preview canvas{display:block;width:100%;height:auto}.qr-card-actions{display:flex;justify-content:center;gap:8px;flex-wrap:wrap;margin:10px 0 18px}
+</style></head><body>
+<header class="app-header"><div class="brand-mark" aria-hidden="true">MT</div><div><p class="eyebrow">MORSHEDAT</p><h1>Morshedat · Son of Thunder</h1><p class="header-copy">Attendance and weekly meeting records</p></div></header>
+<nav id=nav aria-label="Main navigation"></nav><main><div id=v aria-live="polite">Loading…</div>
+<section class=status-card aria-label="Connection and scan status"><div class=connection-row><span id=connection-dot class=connection-dot></span><span id=connection-state>Checking connection…</span></div><p id=msg role=status aria-live=polite>Choose a weekly meeting, then scan a member QR code.</p></section>
+<div id=scan-tools></div><div id=toast class=toast role=status aria-live=polite></div></main>
+<?!= include('QrCode'); ?>
+<?!= include('JsQR'); ?>
 <script>
 const $=s=>document.querySelector(s),V=$('#v'),on=v=>String(v).toUpperCase()==='TRUE';
 const esc=s=>String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 const opts=(a,sel,ph)=>(ph?`<option value="">${ph}</option>`:'')+a.map(([v,l])=>`<option value="${esc(v)}"${v===sel?' selected':''}>${esc(l)}</option>`).join('');
+function qrCanvas(text){const q=qrcode(0,'M');q.addData(text);q.make();const n=q.getModuleCount(),scale=8,margin=4,c=document.createElement('canvas');c.width=c.height=(n+2*margin)*scale;const x=c.getContext('2d');x.fillStyle='#fff';x.fillRect(0,0,c.width,c.height);x.fillStyle='#000';for(let row=0;row<n;row++)for(let col=0;col<n;col++)if(q.isDark(row,col))x.fillRect((col+margin)*scale,(row+margin)*scale,scale,scale);return c;}
+function qrCardCanvas(m){
+ const c=document.createElement('canvas');c.width=900;c.height=1120;const x=c.getContext('2d');
+ x.fillStyle='#f3f7f6';x.fillRect(0,0,c.width,c.height);
+ x.fillStyle='#123b4a';x.fillRect(0,0,c.width,250);
+ x.fillStyle='#e3aa54';x.beginPath();x.arc(790,70,155,0,Math.PI*2);x.fill();
+ x.fillStyle='#fff';x.font='800 28px system-ui, sans-serif';x.textAlign='center';x.fillText('MORSHEDAT',450,75);
+ x.font='700 36px system-ui, sans-serif';x.fillText('SON OF THUNDER',450,135);
+ x.font='500 22px system-ui, sans-serif';x.fillStyle='#dcebe8';x.fillText('SCOUT MEMBER CARD',450,190);
+ x.fillStyle='#fff';x.fillRect(70,290,760,735);
+ x.fillStyle='#123b4a';x.font='800 44px system-ui, sans-serif';x.textAlign='center';
+ const name=String(m.full_name||'Member');let line=name; if(x.measureText(line).width>690){x.font='800 36px system-ui, sans-serif';line=name;}
+ x.fillText(line,450,365,690);
+ x.fillStyle='#61757b';x.font='600 24px system-ui, sans-serif';x.fillText(String(m.unit||'Unit')+'  ·  '+String(m.troop||''),450,420);
+ const qr=qrCanvas(m.qr_token);const qrSize=390;x.drawImage(qr,(900-qrSize)/2,455,qrSize,qrSize);
+ x.fillStyle='#123b4a';x.font='800 46px ui-monospace, monospace';x.fillText(String(m.member_id||m.member_code||''),450,910);
+ x.fillStyle='#61757b';x.font='500 20px system-ui, sans-serif';x.fillText('Keep this card for attendance scanning',450,965);
+ x.fillStyle='#123b4a';x.fillRect(0,1060,900,60);x.fillStyle='#fff';x.font='600 20px system-ui, sans-serif';x.fillText('LEARN  ·  SERVE  ·  GROW',450,1098);
+ return c;
+}
+function showMemberQrCard(m){const host=$('#qr');host.replaceChildren();const wrap=document.createElement('div');wrap.className='qr-card-preview';const canvas=qrCardCanvas(m);canvas.style.width='100%';wrap.appendChild(canvas);const actions=document.createElement('div');actions.className='qr-card-actions';const a=document.createElement('a');a.textContent='Download member QR card';a.download=(m.member_id||'member')+'-qr-card.png';a.href=canvas.toDataURL('image/png');a.style.cssText='display:inline-block;padding:10px 14px;border-radius:10px;background:#123b4a;color:white;text-decoration:none;font-weight:700';actions.appendChild(a);host.append(wrap,actions);host.scrollIntoView({behavior:'smooth',block:'nearest'});}
+
 function call(fn,a){return new Promise((res,rej)=>google.script.run.withSuccessHandler(r=>r.ok?res(r.data):rej(r.error)).withFailureHandler(e=>rej({code:'NETWORK',message:'Network failure: '+(e&&e.message)})).api(fn,a||{}));}
-function note(t,bad){const m=$('#msg');m.textContent=t||'';m.className=t?(bad?'bad':'ok'):'';}
-let S={act:'',acts:[],cfg:null},sc=null,busy=0;const VIEWS={};
-async function stopSc(){if(sc){try{await sc.stop();}catch(e){}sc=null;}}
-async function go(n){await stopSc();note('');try{await VIEWS[n]();}catch(e){note(e.message,1);}}
-const needAct=async()=>{if(S.act)return true;await go('home');note('Select an activity first',1);return false;};
-VIEWS.home=async()=>{S.acts=await call('listActivities');V.innerHTML=`<h3>Activity</h3><select id=sa>${opts(S.acts.map(x=>[x.activity_id,x.activity_date+' · '+x.activity_name+' ['+x.status+']']),S.act,'— select —')}</select><p>${esc(S.cfg.email)} (${S.cfg.role})</p>`;$('#sa').onchange=e=>S.act=e.target.value;};
-async function roster(){const d=await call('eligible',{activity_id:S.act});const draw=()=>{const q=$('#q').value.toLowerCase();$('#res').innerHTML=d.filter(m=>(m.full_name+m.member_id).toLowerCase().includes(q)).map(m=>`<div class=row data-i="${esc(m.member_id)}"><b dir=auto>${esc(m.full_name)}</b> <small>${esc(m.member_id)}</small><br><small dir=auto>${m.att?esc(m.att.attendance_status_label):'— no record —'}</small></div>`).join('');
- document.querySelectorAll('#res .row').forEach(r=>r.onclick=async()=>{const m=d.find(x=>x.member_id===r.dataset.i);if(m.att&&S.cfg.role!=='admin')return note('Already recorded; an admin must correct it.',1);await form(m,m.att);});};$('#q').oninput=draw;draw();}
-VIEWS.scan=async()=>{if(!await needAct())return;V.innerHTML='<div id=reader></div><h4>Manual search</h4><input id=q placeholder="Name or ID"><div id=res></div>';await roster();
- try{sc=new Html5Qrcode('reader');await sc.start({facingMode:'environment'},{fps:10,qrbox:240},onScan,()=>{});}catch(e){sc=null;note('Camera denied or unavailable – use manual search. ('+(e.name||e)+')',1);}};
-async function onScan(t){if(busy)return;busy=1;await stopSc();try{const d=await call('byToken',{token:t,activity_id:S.act});
- if(d.existing&&S.cfg.role!=='admin'){await go('scan');note('Already recorded: '+d.member.full_name,1);}else await form(d.member,d.existing);}
- catch(e){await go('scan');note(e.code+': '+e.message,1);}busy=0;}
-async function form(m,ex){await stopSc();const a=S.acts.find(x=>x.activity_id===S.act)||{};
- V.innerHTML=`<h3 dir=auto>${esc(m.full_name)}</h3><p>${esc(m.member_id)} · ${esc(m.group_name)}<br>${esc(a.activity_name)} · ${esc(a.activity_date)}</p>${ex?'<p class=bad>Existing record – saving is a correction.</p>':''}
- <label>الحضور</label><select id=f1>${opts(S.cfg.att,ex&&ex.attendance_status_code,'— اختر —')}</select>
- <label>الزي</label><select id=f2>${opts(S.cfg.uni.map(x=>[x,x]),ex&&ex.uniform_status,'— اختر —')}</select>
+let toastTimer;
+function note(t,bad){const m=$('#msg');m.textContent=t||'';m.className=t?(bad?'bad':'success'):'';}
+function toast(t,bad){const m=$('#toast');m.textContent=t;m.className='toast show'+(bad?' error':'');clearTimeout(toastTimer);toastTimer=setTimeout(()=>m.className='toast',2600);}
+function updateConnection(){const online=navigator.onLine;$('#connection-dot').className='connection-dot '+(online?'online':'offline');$('#connection-state').textContent=online?'Online':'Offline · scans are queued on this device';}
+window.addEventListener('offline',updateConnection);updateConnection();
+const SCANS_KEY='scouts-qr-offline-scans',ATTENDANCE_KEY='scouts-qr-offline-attendance';
+const readQueue=k=>{try{const q=JSON.parse(localStorage.getItem(k)||'[]');if(!Array.isArray(q))throw Error('Invalid offline queue');return q;}catch(e){throw Error('Could not read offline data: '+e.message);}};
+const writeQueue=(k,q)=>localStorage.setItem(k,JSON.stringify(q));
+let S={act:'',acts:[],cfg:null},stream=null,scanTimer=null,busy=0,syncing=false,lastScanAt=0;const VIEWS={};
+function queueScan(token,activity,scannedAt){const q=readQueue(SCANS_KEY);q.push({id:Date.now().toString(36)+'-'+Math.random().toString(36).slice(2),token,activity_id:activity,scanned_at:scannedAt});writeQueue(SCANS_KEY,q);}
+function queueAttendance(payload){const q=readQueue(ATTENDANCE_KEY);q.push(payload);writeQueue(ATTENDANCE_KEY,q);}
+async function syncOfflineData(){
+ if(syncing||!navigator.onLine)return;syncing=true;let synced=0;
+ try{
+  let pending=readQueue(ATTENDANCE_KEY);
+  while(pending.length){const item=pending[0];await call('submit',item.payload);pending.shift();writeQueue(ATTENDANCE_KEY,pending);
+   if(item.scan_id){const ready=readQueue('scouts-qr-ready-scans').filter(x=>x.id!==item.scan_id);writeQueue('scouts-qr-ready-scans',ready);}synced++;}
+  let scans=readQueue(SCANS_KEY),resolved=readQueue('scouts-qr-ready-scans');
+  while(scans.length){const item=scans[0],d=await call('byToken',{token:item.token,activity_id:item.activity_id});
+   resolved.push({...item,member:d.member,existing:d.existing});scans.shift();writeQueue('scouts-qr-ready-scans',resolved);writeQueue(SCANS_KEY,scans);synced++;}
+  if(synced)note(synced+' offline item(s) synced. Review queued scans to complete attendance.');
+  if($('#v')&&$('#v').querySelector('#reader'))showQueuedScans();
+ }catch(e){note('Offline sync stopped: '+e.message,1);}
+ finally{syncing=false;}
+}
+function showQueuedScans(){
+ const host=$('#v'),q=readQueue('scouts-qr-ready-scans');if(!host)return;
+ const old=host.querySelector('#queued-scans');if(old)old.remove();if(!q.length)return;
+ const b=document.createElement('button');b.id='queued-scans';b.className='sec';b.textContent='Review saved scans ('+q.length+')';
+ b.onclick=()=>{const item=readQueue('scouts-qr-ready-scans')[0];if(!item)return;S.act=item.activity_id;form(item.member,item.existing,item.id,item.scanned_at);};
+ host.insertBefore(b,host.firstChild);
+}
+window.addEventListener('online',()=>{updateConnection();syncOfflineData();});
+async function stopSc(){if(scanTimer){clearTimeout(scanTimer);scanTimer=null;}if(stream){stream.getTracks().forEach(t=>t.stop());stream=null;}
+ const video=$('#video');if(video){video.pause();video.srcObject=null;}}
+async function startScanner(){if(stream)return;try{const video=$('#video');if(!video)return;
+ if(!navigator.mediaDevices||!navigator.mediaDevices.getUserMedia)throw new Error('Camera access requires HTTPS and a supported browser.');
+ stream=await navigator.mediaDevices.getUserMedia({video:{facingMode:{ideal:'environment'}},audio:false});
+ video.srcObject=stream;await video.play();const retry=$('#retry-camera');if(retry)retry.hidden=true;const canvas=document.createElement('canvas'),ctx=canvas.getContext('2d',{willReadFrequently:true});
+ const scan=()=>{if(!stream)return;if(Date.now()-lastScanAt<2600||busy){scanTimer=setTimeout(scan,100);return;}
+  if(S.act&&video.videoWidth){canvas.width=video.videoWidth;canvas.height=video.videoHeight;ctx.drawImage(video,0,0);
+   const frame=ctx.getImageData(0,0,canvas.width,canvas.height),result=jsQR(frame.data,frame.width,frame.height);
+   if(result&&result.data){lastScanAt=Date.now();const shell=$('#camera-frame');shell.classList.add('scanned');setTimeout(()=>shell.classList.remove('scanned'),850);toast('QR code scanned');onScan(result.data);return;}}
+  scanTimer=setTimeout(scan,120);};scan();}
+ catch(e){await stopSc();const message=e.name==='NotAllowedError'?'Camera permission is blocked. Allow camera access in your browser settings, then tap Start camera.':e.name==='NotFoundError'?'No camera was found on this device. Use Scan from photo.':e.name==='NotReadableError'?'The camera is busy in another app. Close that app and retry.':e.message||'Camera unavailable. Use Scan from photo.';
+  note(message,1);toast('Unable to open camera',true);const retry=$('#retry-camera');if(retry)retry.hidden=false;}}
+async function readQrPhoto(file){
+ if(!file||!file.type.startsWith('image/'))throw new Error('Choose an image file.');
+ let image,url='',closeImage=()=>{};
+ if(typeof createImageBitmap==='function'){
+  image=await createImageBitmap(file);closeImage=()=>image.close();
+ }else{
+  url=URL.createObjectURL(file);
+  try{image=await new Promise((resolve,reject)=>{const img=new Image();img.onload=()=>resolve(img);img.onerror=()=>reject(new Error('Could not open this image.'));img.src=url;});}
+  catch(e){URL.revokeObjectURL(url);throw e;}
+  closeImage=()=>URL.revokeObjectURL(url);
+ }
+ const canvas=document.createElement('canvas'),ctx=canvas.getContext('2d',{willReadFrequently:true});
+ if(!ctx){closeImage();throw new Error('Could not read the selected image.');}
+ const scale=Math.min(1,2000/Math.max(image.width,image.height));
+ canvas.width=Math.max(1,Math.round(image.width*scale));canvas.height=Math.max(1,Math.round(image.height*scale));
+ try{ctx.drawImage(image,0,0,canvas.width,canvas.height);const frame=ctx.getImageData(0,0,canvas.width,canvas.height);
+  return jsQR(frame.data,frame.width,frame.height);
+ }finally{closeImage();canvas.width=canvas.height=0;}
+}
+async function go(n){await stopSc();busy=0;note('');$('#scan-tools').replaceChildren();try{await VIEWS[n]();}catch(e){note(e.message,1);}}
+const needAct=async()=>{if(S.act)return true;await go('home');note('Select a meeting first',1);return false;};
+VIEWS.home=async()=>go('scan');
+async function roster(){let d;try{d=await call('eligible',{activity_id:S.act});localStorage.setItem('scouts-qr-roster-'+S.act,JSON.stringify(d));}
+ catch(e){if(navigator.onLine&&e.code!=='NETWORK')throw e;const cached=localStorage.getItem('scouts-qr-roster-'+S.act);if(!cached)return;d=JSON.parse(cached);}
+ const draw=()=>{const q=$('#q').value.toLowerCase();$('#res').innerHTML=d.filter(m=>[m.full_name,m.member_code,m.member_id,m.unit,m.troop].join(' ').toLowerCase().includes(q)).map(m=>`<div class=row data-i="${esc(m.member_id)}"><b dir=auto>${esc(m.full_name)}</b> <small>${esc(m.member_code||m.member_id)} · ${esc(m.unit||'')} · ${esc(m.troop||'')}</small><br><small dir=auto>${m.att?esc(m.att.attendance_status_label):'No record'}</small>${m.att?`<br><button type=button class=sec data-del-roster="${esc(m.att.attendance_id)}">Delete attendance</button>`:''}</div>`).join('');
+ document.querySelectorAll('#res .row').forEach(r=>r.onclick=async()=>{const m=d.find(x=>x.member_id===r.dataset.i);await form(m,m.att);});
+ document.querySelectorAll('[data-del-roster]').forEach(b=>b.onclick=async e=>{e.stopPropagation();const m=d.find(x=>x.att&&x.att.attendance_id===b.dataset.delRoster);if(!m||!confirm('Delete attendance for '+m.full_name+'? Related automatic attendance points will also be removed.'))return;try{await call('deleteAttendance',{attendance_id:b.dataset.delRoster});await roster();note('Attendance record deleted.');}catch(err){note(err.message,1);}});};$('#q').oninput=draw;draw();}
+VIEWS.scan=async()=>{const preferredMeeting=S.act||localStorage.getItem('scouts-qr-selected-activity')||'';S.act='';V.innerHTML='<div class=activity-picker><label for=sa>Meeting</label><select id=sa></select></div><section id=reader class=camera-card aria-label="QR code scanner"><div class=camera-frame id=camera-frame><video id=video playsinline muted autoplay aria-label="Live camera preview"></video><span class=scan-guide aria-hidden=true></span></div><p class=camera-caption>Center the student QR code in the frame.</p><div class=scan-options><button id=retry-camera type=button>Start camera</button><button id=choose-photo class=sec type=button>Scan from photo</button><input id=photo-file type=file accept="image/*" hidden aria-label="Choose a photo containing a student QR code"></div></section>';
+ $('#scan-tools').innerHTML='<h3>Find a student manually</h3><input id=q placeholder="Search by name"><div id=res></div>';
+ const cameraRequest=Promise.resolve();showQueuedScans();
+ try{try{S.acts=await call('listActivities');localStorage.setItem('scouts-qr-activities',JSON.stringify(S.acts));}
+  catch(e){const saved=localStorage.getItem('scouts-qr-activities');if(!saved)throw e;S.acts=JSON.parse(saved);}
+  S.act=S.acts.some(a=>a.activity_id===preferredMeeting)?preferredMeeting:'';
+  if(!S.act)localStorage.removeItem('scouts-qr-selected-activity');
+  const select=$('#sa');select.innerHTML=opts(S.acts.map(a=>[a.activity_id,(a.activity_name||a.group_id+' Meeting')+' · '+(a.status||'open')]),S.act,'— Select meeting —');
+  select.onchange=async e=>{S.act=e.target.value;if(S.act)localStorage.setItem('scouts-qr-selected-activity',S.act);else localStorage.removeItem('scouts-qr-selected-activity');if(!S.act){$('#res').replaceChildren();return;}try{await roster();note('Meeting selected. Scan a student QR code.');}catch(err){note(err.message,1);}};
+  if(S.act&&S.acts.some(a=>a.activity_id===S.act)){select.value=S.act;try{await roster();}catch(e){note(e.message,1);}}
+   else note('Select a meeting, then tap Start camera.');
+ }catch(e){note('Could not load activities: '+e.message,1);}
+ $('#retry-camera').onclick=()=>{startScanner();};
+ $('#choose-photo').onclick=()=>$('#photo-file').click();
+ $('#photo-file').onchange=async e=>{const input=e.currentTarget,file=input.files&&input.files[0];if(!file)return;
+  if(!S.act){note('Select a meeting before scanning a photo.',1);input.value='';return;}
+  if(busy){input.value='';return;}
+  const activity=S.act;busy=1;
+  try{const result=await readQrPhoto(file);if(S.act!==activity){note('Meeting changed. Choose the photo again for the selected activity.',1);}
+   else if(!result||!result.data){note('No QR code found in that photo. Try a clearer, closer image.',1);toast('QR code not found',true);}
+   else{note('QR code found in photo.');toast('QR code found in photo');busy=0;await onScan(result.data);}}
+  catch(error){note(error.message||'Could not scan that photo.',1);toast('Unable to scan photo',true);}
+  finally{busy=0;input.value='';}};
+ await cameraRequest;};
+async function onScan(t){if(busy)return;busy=1;await stopSc();const scannedAt=new Date().toISOString();
+ if(!navigator.onLine){try{queueScan(t,S.act,scannedAt);showQueuedScans();note('Saved Offline. This scan will be checked when you reconnect.');await startScanner();}catch(e){note(e.message,1);}busy=0;return;}
+ try{const d=await call('byToken',{token:t,activity_id:S.act});
+ await form(d.member,d.existing,'',scannedAt);}
+ catch(e){if(e.code==='NETWORK'){try{queueScan(t,S.act,scannedAt);showQueuedScans();note('Saved Offline. This scan will be checked when you reconnect.');await startScanner();}catch(x){note(x.message,1);}}
+  else{await go('scan');note(e.code+': '+e.message,1);}}finally{busy=0;}}
+async function form(m,ex,offlineScanId,scannedAt){await stopSc();$('#scan-tools').replaceChildren();const a=S.acts.find(x=>x.activity_id===S.act)||{};
+ V.innerHTML=`<h3 dir=auto>${esc(m.full_name)}</h3><p>ID: ${esc(m.member_code||m.member_id)} · ${esc(m.unit||'')} · ${esc(m.troop||'')} · ${esc(m.group_name)}<br>${esc(m.unit||m.group_name||'Unit')} · ${esc(a.activity_date)}</p>${ex?'<p class=bad>Existing record – saving is a correction.</p>':''}
+ <label>Attendance</label><select id=f1>${opts(S.cfg.att,ex&&ex.attendance_status_code,'— اختر —')}</select>
+ <label>Uniform</label><select id=f2>${opts(S.cfg.uni.map(x=>[x,x]),ex&&ex.uniform_status,'— اختر —')}</select>
  ${[['f3','قداس','mass_participation'],['f4','مدارس أحد','sunday_school_participation'],['f5','اعتراف','confession_participation']].map(([i,l,k])=>`<label>${l}</label><select id=${i}>${opts(S.cfg.yn.map(x=>[x,x]),ex?ex[k]:S.cfg.yn[2])}</select>`).join('')}
- <label>Notes</label><textarea id=f6>${esc(ex&&ex.notes)}</textarea><br><button id=ok>Submit</button> <button id=cx class=sec>Cancel / Rescan</button>`;
+ <label>Notes</label><textarea id=f6>${esc(ex&&ex.notes)}</textarea><br><button id=ok>Save attendance</button> <button id=cx class=sec>Cancel / Scan again</button>`;
  $('#cx').onclick=()=>go(ex?'review':'scan');
  $('#ok').onclick=async e=>{const b=e.target,v=i=>$('#'+i).value;if(!v('f1')||!v('f2'))return note('Attendance and uniform are required',1);b.disabled=true;
-  try{const r=await call('submit',{member_id:m.member_id,activity_id:S.act,attendance_status_code:v('f1'),uniform_status:v('f2'),mass_participation:v('f3'),sunday_school_participation:v('f4'),confession_participation:v('f5'),notes:v('f6'),correction:!!ex,expected_updated_at:ex?ex.updated_at:''});
-   await go(ex?'review':'scan');note('Saved: '+m.full_name+' (points change: '+r.points_change+')');}catch(x){note(x.code+': '+x.message,1);b.disabled=false;}};}
-VIEWS.review=async()=>{if(!await needAct())return;V.innerHTML='<input id=q placeholder="Name or ID"><div id=res></div><button id=fin>Finalize</button> <button id=cls class=sec>Close</button>';await roster();$('#fin').onclick=()=>fin('finalized');$('#cls').onclick=()=>fin('closed');};
-async function fin(st,force){try{await call('finalize',{activity_id:S.act,status:st,force});note('Activity '+st);}catch(e){if(e.code==='MISSING_ATTENDANCE'&&confirm(e.message+'\nContinue anyway?'))return fin(st,true);note(e.message,1);}}
-VIEWS.groups=async()=>{const g=await call('listGroups');V.innerHTML=g.map(x=>`<div class=row data-i="${esc(x.group_id)}" data-n="${esc(x.group_name)}" data-a="${on(x.active)}">${esc(x.group_name)} ${on(x.active)?'':'(inactive)'}</div>`).join('')+'<h4>Add / edit (tap a group to edit)</h4><input id=gn placeholder="Group name"><label><input type=checkbox id=ga checked> active</label><input type=hidden id=gi><button id=gs>Save</button>';
- document.querySelectorAll('.row').forEach(r=>r.onclick=()=>{$('#gi').value=r.dataset.i;$('#gn').value=r.dataset.n;$('#ga').checked=r.dataset.a==='true';});
- $('#gs').onclick=async()=>{try{await call('saveGroup',{group_id:$('#gi').value,group_name:$('#gn').value,active:$('#ga').checked});await go('groups');note('Saved');}catch(e){note(e.message,1);}};};
+  const payload={member_id:m.member_id,activity_id:S.act,attendance_status_code:v('f1'),uniform_status:v('f2'),mass_participation:v('f3'),sunday_school_participation:v('f4'),confession_participation:v('f5'),notes:v('f6'),correction:!!ex,expected_updated_at:ex?ex.updated_at:'',scanned_at:scannedAt||new Date().toISOString()};
+  if(!navigator.onLine){try{queueAttendance({payload,scan_id:offlineScanId||''});note('Saved Offline. Attendance will sync when you reconnect.');}catch(x){note(x.message,1);b.disabled=false;}return;}
+  try{await call('submit',payload);if(offlineScanId){const q=readQueue('scouts-qr-ready-scans').filter(x=>x.id!==offlineScanId);writeQueue('scouts-qr-ready-scans',q);}
+   await go(ex?'review':'scan');note('Saved: '+m.full_name);}
+  catch(x){if(x.code==='NETWORK'){try{queueAttendance({payload,scan_id:offlineScanId||''});note('Saved Offline. Attendance will sync when you reconnect.');}catch(y){note(y.message,1);b.disabled=false;}}
+   else{note(x.code+': '+x.message,1);b.disabled=false;}}};}
+VIEWS.review=async()=>{
+ S.acts=await call('listActivities');
+ const preferred=S.act||localStorage.getItem('scouts-qr-selected-activity')||'';
+ S.act=S.acts.some(a=>a.activity_id===preferred)?preferred:'';
+ V.innerHTML=`<h3>Attendance</h3>
+ <label for=sa>Select meeting</label><select id=sa>${opts(S.acts.map(a=>[a.activity_id,(a.activity_name||a.group_id+' Meeting')+' · '+(a.status||'open')]),S.act,'— Select meeting —')}</select>
+ <section id=reader class=camera-card aria-label="QR code scanner"><div class=camera-frame id=camera-frame><video id=video playsinline muted autoplay aria-label="Live camera preview"></video><span class=scan-guide aria-hidden=true></span></div><p class=camera-caption>Scan a member QR code to open the attendance form.</p><div class=scan-options><button id=retry-camera type=button>Start camera</button><button id=choose-photo class=sec type=button>Scan from photo</button><input id=photo-file type=file accept="image/*" hidden aria-label="Choose a photo containing a member QR code"></div></section>
+ <h4>Find a member manually</h4><input id=q placeholder="Search by name or ID"><div id=res></div>
+ <button id=fin>Finalize</button> <button id=cls class=sec>Close</button>`;
+ const choose=async id=>{await stopSc();busy=0;S.act=id;if(id)localStorage.setItem('scouts-qr-selected-activity',id);else localStorage.removeItem('scouts-qr-selected-activity');$('#res').replaceChildren();if(id){try{await roster();note('Meeting selected. Scan a member QR code or choose a name.');}catch(e){note(e.message,1);}}else note('Select a meeting before scanning.',1);};
+ $('#sa').onchange=e=>choose(e.target.value);
+ $('#retry-camera').onclick=()=>startScanner();
+ $('#choose-photo').onclick=()=>$('#photo-file').click();
+ $('#photo-file').onchange=async e=>{const input=e.currentTarget,file=input.files&&input.files[0];if(!file)return;if(!S.act){note('Select a meeting before scanning.',1);input.value='';return;}if(busy){input.value='';return;}const activity=S.act;busy=1;try{const result=await readQrPhoto(file);if(S.act!==activity)note('Meeting changed. Choose the photo again.',1);else if(!result||!result.data){note('No QR code found in that photo. Try a clearer image.',1);toast('QR code not found',true);}else{busy=0;await onScan(result.data);}}catch(error){note(error.message||'Could not scan that photo.',1);toast('Unable to scan photo',true);}finally{busy=0;input.value='';}};
+ $('#fin').onclick=()=>S.act&&fin('finalized');$('#cls').onclick=()=>S.act&&fin('closed');
+ if(S.act){$('#sa').value=S.act;await roster();showQueuedScans();note('Meeting selected. Scan a member QR code or choose a name.');}else note('Select a meeting, then tap Start camera.');
+};
+async function fin(st,force){try{await call('finalize',{activity_id:S.act,status:st,force});note('Meeting '+st);}catch(e){if(e.code==='MISSING_ATTENDANCE'&&confirm(e.message+'\nContinue anyway?'))return fin(st,true);note(e.message,1);}}
 VIEWS.members=async()=>{const [ms,gs]=await Promise.all([call('listMembers'),call('listGroups')]);
- V.innerHTML=`<input id=q placeholder="Search name or ID"><div id=res></div><div id=qr></div><h4>Add / edit</h4><input type=hidden id=mi><input id=mn placeholder="Full name"><select id=mg>${opts(gs.map(g=>[g.group_id,g.group_name]),'','— group —')}</select><input id=my placeholder="Year (optional)"><input id=mc placeholder="Contact (optional, admin only)"><label><input type=checkbox id=ma checked> active</label><button id=ms>Save</button>`;
- const draw=()=>{const q=$('#q').value.toLowerCase();$('#res').innerHTML=ms.filter(m=>(m.full_name+m.member_id).toLowerCase().includes(q)).map(m=>`<div class=row><b dir=auto>${esc(m.full_name)}</b> <small>${esc(m.member_id)} · ${esc(m.group_name)} · ${m.points} pts ${on(m.active)?'':'(inactive)'}</small><br>${S.cfg.role==='admin'?`<button class=sec data-e="${esc(m.member_id)}">Edit</button> <button class=sec data-q="${esc(m.member_id)}">QR</button>`:''}</div>`).join('');
-  document.querySelectorAll('[data-e]').forEach(b=>b.onclick=()=>{const m=ms.find(x=>x.member_id===b.dataset.e);$('#mi').value=m.member_id;$('#mn').value=m.full_name;$('#mg').value=m.group_id;$('#my').value=m.year;$('#mc').value=m.contact_info;$('#ma').checked=on(m.active);});
-  document.querySelectorAll('[data-q]').forEach(b=>b.onclick=()=>{const m=ms.find(x=>x.member_id===b.dataset.q),d=$('#qr');d.innerHTML='';new QRCode(d,{text:m.qr_token,width:220,height:220});setTimeout(()=>{const l=document.createElement('a');l.textContent='Download PNG ('+m.full_name+')';l.download=m.member_id+'.png';l.href=d.querySelector('canvas').toDataURL('image/png');d.append(document.createElement('br'),l);},60);});};
+ const troopsByUnit={Orion:['كروان','نمر','فيل','نحلة'],Polaris:['كوبرا','صقر','سنجاب','اسد']};
+ const fillTroops=(selected='')=>{$('#mt').innerHTML=opts((troopsByUnit[$('#mu').value]||[]).map(t=>[t,t]),selected,'— Select troop —');};
+ V.innerHTML=`<h3>Members</h3><input id=q placeholder="ابحثي بالاسم أو Member ID أو Unit أو Troop"><div id=res></div><div id=qr></div><h4>Add / Edit Member</h4><input type=hidden id=mi>
+ <label>Member name</label><input id=mn placeholder="Full name" required>
+ <p class=pill id=generated-id>Member code will be generated automatically when saved (e.g. KRM482).</p>
+ <label>Unit</label><select id=mu>${opts([['Orion','Orion'],['Polaris','Polaris']],'','— Select unit —')}</select>
+ <label>Troop</label><select id=mt>${opts([], '', '— Select unit first —')}</select>
+ <p class=pill>Weekly meetings are assigned to Orion or Polaris.</p>
+ <label>School year</label><input id=my placeholder="School year">
+ <label>Birthday date</label><input id=mbday type=date>
+ <label>Location / Area</label><input id=mloc placeholder="Location / Area">
+ <label>Phone number</label><input id=mp type=tel placeholder="Phone number">
+ <label>National ID</label><input id=mnid inputmode=numeric placeholder="National ID">
+ <label>Mother’s phone</label><input id=mom type=tel placeholder="Mother’s phone">
+ <label>Father’s phone</label><input id=dad type=tel placeholder="Father’s phone">
+ <label>Notes</label><textarea id=mnotes rows=3 placeholder="Notes إدارية"></textarea>
+ <label><input type=checkbox id=ma checked> Active</label><button id=ms>Save member</button>`;
+ const draw=()=>{const q=$('#q').value.toLowerCase();$('#res').innerHTML=ms.filter(m=>[m.full_name,m.member_code,m.member_id,m.unit,m.troop,m.phone_number,m.group_name,m.location].join(' ').toLowerCase().includes(q)).map(m=>`<div class=row><b dir=auto>${esc(m.full_name)}</b><br><small>ID: ${esc(m.member_code||m.member_id)} · ${esc(m.unit||'—')} · ${esc(m.troop||'—')} · ${esc(m.phone_number||'—')} ${on(m.active)?'':'(Inactive)'}</small><br><button class=sec data-e="${esc(m.member_id)}">Edit</button> <button class=sec data-q="${esc(m.member_id)}">QR code</button> <button class=sec data-del-member="${esc(m.member_id)}">Delete</button></div>`).join('');
+  document.querySelectorAll('[data-e]').forEach(b=>b.onclick=()=>{const m=ms.find(x=>x.member_id===b.dataset.e);$('#mi').value=m.member_id;$('#mn').value=m.full_name||'';$('#generated-id').textContent='Member ID: '+(m.member_id||m.member_code)+' (generated automatically)';$('#mu').value=m.unit||'';fillTroops(m.troop||'');$('#my').value=m.year||'';$('#mbday').value=String(m.birthday_date||'').slice(0,10);$('#mloc').value=m.location||'';$('#mp').value=m.phone_number||m.contact_info||'';$('#mnid').value=m.national_id||'';$('#mom').value=m.mother_phone||'';$('#dad').value=m.father_phone||'';$('#mnotes').value=m.notes||'';$('#ma').checked=on(m.active);});
+  document.querySelectorAll('[data-q]').forEach(b=>b.onclick=()=>{const m=ms.find(x=>x.member_id===b.dataset.q);showMemberQrCard(m);});
+  document.querySelectorAll('[data-del-member]').forEach(b=>b.onclick=async()=>{const m=ms.find(x=>x.member_id===b.dataset.delMember);if(!m||!confirm('Delete '+m.full_name+' and all of her attendance/points history? This cannot be undone.'))return;try{await call('deleteMember',{member_id:m.member_id});await go('members');note('Member and related history deleted.');}catch(e){note(e.message,1);}});};
+ $('#mu').onchange=()=>fillTroops();
  $('#q').oninput=draw;draw();
- $('#ms').onclick=async()=>{try{await call('saveMember',{member_id:$('#mi').value,full_name:$('#mn').value,group_id:$('#mg').value,year:$('#my').value,contact_info:$('#mc').value,active:$('#ma').checked});await go('members');note('Saved');}catch(e){note(e.message,1);}};};
-VIEWS.acts=async()=>{const [as,gs]=await Promise.all([call('listActivities'),call('listGroups')]);const gn={};gs.forEach(g=>gn[g.group_id]=g.group_name);
- V.innerHTML=as.map(a=>`<div class=row>${esc(a.activity_date)} · ${esc(a.activity_name)} <small>${esc(a.activity_type)} · ${a.group_id==='ALL'?'All groups':esc(gn[a.group_id])} · ${a.status}</small></div>`).join('')+`<h4>New activity</h4><input id=an placeholder="Name"><select id=at>${opts(['Weekly meeting','Scout activity','Church activity','Camp','Special event'].map(x=>[x,x]))}</select><input id=ad type=date><select id=ag>${opts([['ALL','All groups']].concat(gs.map(g=>[g.group_id,g.group_name])))}</select><button id=as>Create</button>`;
- $('#as').onclick=async()=>{try{await call('saveActivity',{activity_name:$('#an').value,activity_type:$('#at').value,activity_date:$('#ad').value,group_id:$('#ag').value});await go('acts');note('Created');}catch(e){note(e.message,1);}};};
-VIEWS.points=async()=>{const [ms,as]=await Promise.all([call('listMembers'),call('listActivities')]);
- V.innerHTML=`<select id=pm>${opts(ms.map(m=>[m.member_id,m.full_name]),'','— member —')}</select><div id=pl></div><select id=pa>${opts(as.map(a=>[a.activity_id,a.activity_date+' '+a.activity_name]),'','(no activity)')}</select><input id=pd type=number step=1 placeholder="Points (integer, may be negative)"><input id=pr placeholder="Reason (required)"><button id=ps>Add</button>`;
- const load=async()=>{if(!$('#pm').value)return;const l=await call('ledger',{member_id:$('#pm').value});$('#pl').innerHTML=`<h3>Total: ${l.total}</h3>`+l.rows.map(t=>`<div class=row>${t.points_delta} · ${esc(t.source)} · <small>${esc(t.reason)} · ${esc(t.created_at)}</small></div>`).join('');};
- $('#pm').onchange=load;$('#ps').onclick=async()=>{try{await call('manualPoints',{member_id:$('#pm').value,activity_id:$('#pa').value,points:$('#pd').value,reason:$('#pr').value});note('Added');$('#pd').value=$('#pr').value='';load();}catch(e){note(e.message,1);}};};
-VIEWS.ach=async()=>{const ms=await call('listMembers');V.innerHTML=`<select id=am>${opts(ms.map(m=>[m.member_id,m.full_name]),'','— member —')}</select><div id=al></div><input id=at placeholder="Title"><input id=ac placeholder="Description (optional)"><input id=ad type=date><input id=ab placeholder="Awarding servant (optional)"><button id=as>Record</button>`;
- const load=async()=>{if(!$('#am').value)return;const r=await call('listAchievements',{member_id:$('#am').value});$('#al').innerHTML=r.map(a=>`<div class=row>${esc(a.earned_at)} · <b>${esc(a.title)}</b> <small>${esc(a.description)}</small></div>`).join('');};
- $('#am').onchange=load;$('#as').onclick=async()=>{try{await call('addAchievement',{member_id:$('#am').value,title:$('#at').value,description:$('#ac').value,earned_at:$('#ad').value,awarded_by:$('#ab').value});note('Recorded');load();}catch(e){note(e.message,1);}};};
-VIEWS.settings=async()=>{const r=await call('getRules');V.innerHTML='<h3>Attendance point rules</h3><p>Blank = unconfigured (submissions for that status are blocked).</p>'+r.rules.map(x=>`<div class=row dir=auto>${esc(x.label)}<input type=number step=1 data-c="${x.code}" value="${esc(x.points)}"></div>`).join('')+`<label><input type=checkbox id=aw ${r.allow?'checked':''}> Allow attendance without points (explicit mode)</label><button id=sv>Save</button>`;
- $('#sv').onclick=async()=>{const rules={};document.querySelectorAll('[data-c]').forEach(i=>rules[i.dataset.c]=i.value);try{await call('saveRules',{rules,allow:$('#aw').checked});note('Saved');}catch(e){note(e.message,1);}};};
-call('init').then(c=>{S.cfg=c;$('#nav').innerHTML=[['home','Home'],['scan','Scan'],['review','Attendance'],['groups','Groups'],['members','Members'],['acts','Activities'],['points','Points'],['ach','Achievements'],['settings','Rules']].map(([k,l])=>`<button class=sec data-g="${k}">${l}</button>`).join('');
- document.querySelectorAll('[data-g]').forEach(b=>b.onclick=()=>go(b.dataset.g));go('home');}).catch(e=>V.textContent=e.message);
+ $('#ms').onclick=async()=>{try{await call('saveMember',{member_id:$('#mi').value,full_name:$('#mn').value,unit:$('#mu').value,troop:$('#mt').value,year:$('#my').value,birthday_date:$('#mbday').value,location:$('#mloc').value,phone_number:$('#mp').value,contact_info:$('#mp').value,national_id:$('#mnid').value,mother_phone:$('#mom').value,father_phone:$('#dad').value,notes:$('#mnotes').value,active:$('#ma').checked});await go('members');note('Member saved');}catch(e){note(e.message,1);}};};
+VIEWS.acts=async()=>{const [as,gs]=await Promise.all([call('listActivities'),call('listGroups')]);const units=gs.filter(g=>['Orion','Polaris'].includes(g.group_name));
+ V.innerHTML=`<h3>Weekly Meetings</h3><p>Each meeting is named by unit, season, and date. Points keep accumulating across the year.</p>`+as.map(a=>`<div class=row><b>${esc(a.activity_name||((gs.find(g=>g.group_id===a.group_id)||{}).group_name||'Unit')+' Meeting')}</b> <small>· ${esc(a.term||'Legacy')} · ${esc(a.status||'open')}</small><br><button class=sec data-del-activity="${esc(a.activity_id)}">Delete meeting</button></div>`).join('')+`<h4>Create weekly meeting</h4><label for=ad>Date</label><input id=ad type=date required><label for=ag>Unit</label><select id=ag>${opts(units.map(g=>[g.group_id,g.group_name]),'','— Select unit —')}</select><label for=at>Term and year</label><select id=at>${opts((S.cfg.terms||[]).map(t=>[t,t]),'Spring '+new Date().getFullYear(),'— Select term and year —')}</select><button id=as>Create meeting</button>`;
+ document.querySelectorAll('[data-del-activity]').forEach(b=>b.onclick=async()=>{const a=as.find(x=>x.activity_id===b.dataset.delActivity);if(!a||!confirm('Delete this meeting and all its attendance/points records? This cannot be undone.'))return;try{await call('deleteActivity',{activity_id:a.activity_id});await go('acts');note('Meeting and related records deleted.');}catch(e){note(e.message,1);}});
+ $('#as').onclick=async()=>{try{if(!$('#ad').value||!$('#ag').value||!$('#at').value){note('Choose a date, unit, and term.',1);return;}await call('saveActivity',{activity_name:$('#ag').selectedOptions[0].textContent+' '+$('#at').value,activity_type:'Weekly meeting',activity_date:$('#ad').value,group_id:$('#ag').value,term:$('#at').value});await go('acts');note('Meeting created');}catch(e){note(e.message,1);}};};
+VIEWS.meetings=async()=>{
+ const acts=await call('listActivities');
+ V.innerHTML=`<h3>Meeting details</h3><label for=meeting-pick>Select meeting</label><select id=meeting-pick>${opts(acts.map(a=>[a.activity_id,(a.activity_name||a.group_id+' Meeting')+' · '+(a.term||'Legacy')+' · '+(a.status||'open')]),'','— Select a meeting —')}</select><div id=meeting-report></div>`;
+ const render=async()=>{const id=$('#meeting-pick').value,host=$('#meeting-report');if(!id){host.innerHTML='';return;}
+  const r=await call('meetingReport',{activity_id:id});
+  const attended=r.rows.filter(x=>x.attendance&&x.attendance.attendance_status_code==='S1').length;const attendancePct=r.eligible_count?Math.round(attended/r.eligible_count*100):0;const rows=r.rows.map(x=>{const a=x.attendance;return `<tr><td dir=auto><b>${esc(x.member_name)}</b><br><small>${esc(x.group_name)}</small></td><td>${a?esc(a.attendance_status_label):'Not recorded'}</td><td>${a?esc(a.uniform_status):'—'}</td><td>${a?esc(a.mass_participation):'—'}</td><td>${a?esc(a.sunday_school_participation):'—'}</td><td>${a?esc(a.confession_participation):'—'}</td><td dir=auto>${a?esc(a.notes||''):''}</td></tr>`;}).join('');
+  host.innerHTML=`<h4>${esc(r.activity.activity_name||r.activity.activity_date)}</h4><div class=metrics><div class=metric><strong>${attendancePct}%</strong><span>Attendance rate for this meeting</span></div><div class=metric><strong>${r.eligible_count}</strong><span>Eligible members</span></div><div class=metric><strong>${r.recorded_count}</strong><span>Attendance records</span></div><div class=metric><strong>${r.missing_count}</strong><span>Not recorded yet</span></div></div><div class=table-wrap><table><thead><tr><th>Member name / Unit</th><th>Attendance</th><th>Uniform</th><th>قداس</th><th>مدارس أحد</th><th>اعتراف</th><th>Notes</th></tr></thead><tbody>${rows||'<tr><td colspan=7>No eligible members found for this meeting.</td></tr>'}</tbody></table></div>`;
+ };
+ $('#meeting-pick').onchange=()=>render().catch(e=>note(e.message,1));
+ if(acts.length){$('#meeting-pick').value=acts[0].activity_id;await render();}
+};
+VIEWS.records=async()=>{
+ const [records,acts]=await Promise.all([call('listAttendance'),call('listActivities')]);
+ V.innerHTML=`<h3>Attendance Log</h3><input id=record-q placeholder="ابحثي بMember name أو الاجتماع أو Unit"><select id=record-act>${opts(acts.map(a=>[a.activity_id,(a.activity_name||a.group_id+' Meeting')+' · '+(a.term||'Legacy')]),'','All meetings')}</select><div id=record-results></div>`;
+ const draw=()=>{const q=$('#record-q').value.trim().toLowerCase(),act=$('#record-act').value;
+  const list=records.filter(r=>(!act||r.activity_id===act)&&[r.member_name,r.group_name,r.attendance_status_label,r.activity_date].join(' ').toLowerCase().includes(q));
+  $('#record-results').innerHTML=`<p>${list.length} records</p><div class=table-wrap><table><thead><tr><th>Date</th><th>Member name</th><th>Unit</th><th>Attendance</th><th>Uniform</th><th>قداس</th><th>مدارس أحد</th><th>اعتراف</th><th>Notes</th><th>Action</th></tr></thead><tbody>${list.map(r=>`<tr><td>${esc(r.activity_date)}</td><td dir=auto><b>${esc(r.member_name)}</b></td><td>${esc(r.group_name)}</td><td>${esc(r.attendance_status_label)}</td><td>${esc(r.uniform_status)}</td><td>${esc(r.mass_participation)}</td><td>${esc(r.sunday_school_participation)}</td><td>${esc(r.confession_participation)}</td><td dir=auto>${esc(r.notes||'')}</td><td><button class=sec data-del-attendance="${esc(r.attendance_id)}">Delete</button></td></tr>`).join('')||'<tr><td colspan=10>No matching records.</td></tr>'}</tbody></table></div>`;
+  document.querySelectorAll('[data-del-attendance]').forEach(b=>b.onclick=async()=>{const r=list.find(x=>x.attendance_id===b.dataset.delAttendance);if(!r||!confirm(`Delete attendance for ${r.member_name} on ${r.activity_date}? Related automatic attendance points will also be removed.`))return;try{await call('deleteAttendance',{attendance_id:r.attendance_id});await go('records');note('Attendance record deleted.');}catch(e){note(e.message,1);}});
+ };
+ $('#record-q').oninput=draw;$('#record-act').onchange=draw;draw();
+};
+VIEWS.analytics=async()=>{
+ const ms=await call('listMembers');let all=[];
+ V.innerHTML=`<h3>Member Analytics</h3><p>Choose a term to view attendance and absences for that term. Points shown are the cumulative total for the whole year.</p><label for=analytics-term>Term</label><select id=analytics-term>${opts([['All','All terms'],...(S.cfg.terms||['Spring','Summer','Fall']).map(t=>[t,t])],'All')}</select>
+ <input id=analytics-q placeholder="ابحثي بالاسم أو Unit أو Troop"><div id=all-analytics></div>
+ <hr><label for=girl-pick>Select a member</label><select id=girl-pick>${opts(ms.map(m=>[m.member_id,m.full_name+' · '+(m.unit||m.group_name||'')+' · '+(m.troop||'')]),'','— Select member —')}</select><div id=girl-report></div>`;
+ const loadTerm=async()=>{all=await call('allMemberAnalytics',{term:$('#analytics-term').value||'All'});drawAll();if($('#girl-pick').value)await renderOne();};
+ const drawAll=()=>{const q=$('#analytics-q').value.trim().toLowerCase();const rows=all.filter(x=>[x.full_name,x.member_code,x.unit,x.troop,x.group_name].join(' ').toLowerCase().includes(q));
+  $('#all-analytics').innerHTML=`<p>${rows.length} members</p><div class=table-wrap><table><thead><tr><th>Member name</th><th>ID</th><th>Unit</th><th>Troop</th><th>Attendance %</th><th>Points</th><th>Attended</th><th>Absences</th><th>Classification</th><th>Details</th></tr></thead><tbody>${rows.map(x=>`<tr><td dir=auto><b>${esc(x.full_name)}</b></td><td>${esc(x.member_code||x.member_id)}</td><td>${esc(x.unit||'—')}</td><td>${esc(x.troop||'—')}</td><td><b>${x.attendance_percent}%</b></td><td><b>${x.total_points}</b></td><td>${x.attended}/${x.total_meetings}</td><td>${x.absences}</td><td>${esc(x.class_name)}</td><td><button class=sec data-detail="${esc(x.member_id)}">View</button></td></tr>`).join('')||'<tr><td colspan=10>No results found.</td></tr>'}</tbody></table></div>`;
+  document.querySelectorAll('[data-detail]').forEach(b=>b.onclick=()=>{$('#girl-pick').value=b.dataset.detail;renderOne().catch(e=>note(e.message,1));$('#girl-report').scrollIntoView({behavior:'smooth',block:'start'});});
+ };
+ const renderOne=async()=>{const id=$('#girl-pick').value,host=$('#girl-report');if(!id){host.innerHTML='';return;}
+  const a=await call('girlAnalytics',{member_id:id,term:$('#analytics-term').value||'All'}),m=a.member;
+  const statusRows=Object.entries(a.status_counts).map(([label,count])=>`<tr><td dir=auto>${esc(label)}</td><td>${count}</td></tr>`).join('');
+  const history=a.history.map(h=>`<tr><td>${esc(h.activity_date)}</td><td>${esc(h.attendance_status_label)}</td><td>${h.recorded?esc(h.uniform_status):'—'}</td><td>${h.recorded?esc(h.mass_participation):'—'}</td><td>${h.recorded?esc(h.sunday_school_participation):'—'}</td><td>${h.recorded?esc(h.confession_participation):'—'}</td></tr>`).join('');
+  host.innerHTML=`<h4 dir=auto>${esc(m.full_name)} · ${esc(m.unit||'')} · ${esc(m.troop||'')}</h4><div class=row><b>Member details</b><p>ID: ${esc(m.member_code||m.member_id)} · Unit: ${esc(m.group_name||'—')} · Year: ${esc(m.year||'—')}</p><p>Birthday: ${esc(m.birthday_date||'—')} · Location: ${esc(m.location||'—')}</p><p>Phone: ${esc(m.phone_number||'—')} · National ID: ${esc(m.national_id||'—')}</p><p>Mother’s phone: ${esc(m.mother_phone||'—')} · Father’s phone: ${esc(m.father_phone||'—')}</p><p>Notes: ${esc(m.notes||'—')}</p></div>
+  <div class=metrics><div class=metric><strong>${a.attendance_percent}%</strong><span>Attendance percentage</span></div><div class=metric><strong>${a.total_points}</strong><span>Total points</span></div><div class=metric><strong>${a.total_meetings}</strong><span>Total meetings</span></div><div class=metric><strong>${a.recorded_meetings}</strong><span>Meetings recorded</span></div><div class=metric><strong>${a.missing_records}</strong><span>Missing records</span></div><div class=metric><strong>${a.on_time}</strong><span>On time</span></div><div class=metric><strong>${a.late}</strong><span>Late</span></div><div class=metric><strong>${a.absences}</strong><span>Absences</span></div><div class=metric><strong>${a.uniform_compliance}</strong><span>Uniform compliance</span></div><div class=metric><strong>${a.class_name}</strong><span>Classification</span></div><div class=metric><strong>${a.watch_status}</strong><span>Follow-up status</span></div></div>
+  <h4>Attendance status breakdown</h4><div class=table-wrap><table><thead><tr><th>Status</th><th>Count</th></tr></thead><tbody>${statusRows}</tbody></table></div>
+  <h4>Meeting history</h4><div class=table-wrap><table><thead><tr><th>Date</th><th>Attendance</th><th>Uniform</th><th>قداس</th><th>مدارس أحد</th><th>اعتراف</th></tr></thead><tbody>${history||'<tr><td colspan=7>No meeting history yet.</td></tr>'}</tbody></table></div>
+`;
+ };
+ $('#analytics-q').oninput=drawAll;$('#analytics-term').onchange=()=>loadTerm().catch(e=>note(e.message,1));$('#girl-pick').onchange=()=>renderOne().catch(e=>note(e.message,1));
+ if(ms.length)$('#girl-pick').value=ms[0].member_id;await loadTerm();
+};
+call('init').then(c=>{S.cfg=c;$('#nav').innerHTML=[['review','Attendance'],['meetings','Meetings'],['records','Attendance Log'],['analytics','Analytics'],['members','Members'],['acts','Weekly Meetings']].map(([k,l])=>`<button class=sec data-g="${k}">${l}</button>`).join('');
+ document.querySelectorAll('[data-g]').forEach(b=>b.onclick=()=>go(b.dataset.g));syncOfflineData();go('review');}).catch(e=>{V.textContent=e.message;note(e.message,1);});
 </script></body></html>
