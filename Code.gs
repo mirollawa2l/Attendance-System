@@ -1,5 +1,7 @@
-// QR Scouts & Church Tracking – container-bound Apps Script. See README.md.
+// QR Scouts & Church Tracking – container-bound Apps Script (JSON API for the GitHub Pages frontend). See DEPLOYMENT.md.
 const ATT=[['S1','حضر في الميعاد'],['S2','محضرش في الميعاد ومعتذر'],['S3','محضرش في الميعاد ومعتذر عذر غير مقبول'],['S4','محضرش في الميعاد ومعتذرش'],['S5','محضرش ومعتذر'],['S6','محضرش ومعتذر عذر غير مقبول'],['S7','محضرش ومعتذرش']];
+// Statuses 1-4 count as attended (present); 5-7 count as absent.
+const ATTENDED_=['S1','S2','S3','S4'],ABSENT_=['S5','S6','S7'];
 const UNI=['التزام بالزي','عدم التزام بالزي ومش معتذر','عدم التزام بالزي ومعتذر'];
 const YN=['أيوه','لأ','لم يُسجّل'], NA=YN[2];
 const TROOPS_={Orion:['كروان','نمر','فيل','نحلة'],Polaris:['كوبرا','صقر','سنجاب','اسد']};
@@ -10,6 +12,8 @@ function termOptions_(){
  try{read_('Activities').forEach(a=>{const t=termForActivity_(a);if(t!=='Legacy'&&!out.includes(t))out.push(t);});}catch(_){}
  return out.sort((a,b)=>{const ya=Number(a.slice(-4)),yb=Number(b.slice(-4));if(ya!==yb)return yb-ya;return TERMS_.indexOf(a.replace(/ \d{4}$/,''))-TERMS_.indexOf(b.replace(/ \d{4}$/,''));});
 }
+// term filter: 'All' | 'Spring' (season, any year) | '2026' (year, any season) | 'Spring 2026' (exact)
+function termMatches_(a,term){term=String(term||'All');if(term==='All')return true;const t=termForActivity_(a);if(/^\d{4}$/.test(term))return t.slice(-4)===term;if(TERMS_.indexOf(term)>=0)return t.split(' ')[0]===term;return t===term;}
 function activityYear_(a){const d=String(a.activity_date||'');const m=d.match(/^(\d{4})/);return m?m[1]:String(new Date().getFullYear());}
 function termForActivity_(a){const raw=String(a.term||'').trim();if(raw==='Legacy'||!raw)return 'Legacy';if(/^(Spring|Fall|Summer)$/.test(raw))return raw+' '+activityYear_(a);if(/^(Spring|Fall|Summer) \d{4}$/.test(raw))return raw;return 'Legacy';}
 function displayDate_(v){const d=String(v||'').slice(0,10);const m=d.match(/^(\d{4})-(\d{2})-(\d{2})$/);return m?m[3]+'-'+m[2]+'-'+m[1]:d;}
@@ -25,14 +29,31 @@ const H={
  PointsLedger:['transaction_id','member_id','activity_id','points_delta','source','rule_code','reason','related_transaction_id','created_at','created_by','member_name'],
  Settings:['key','value','points','configured']};
 const NUMCOLS=['points_delta','points'];
-function include(filename){return HtmlService.createHtmlOutputFromFile(filename).getContent();}
-function doGet(){return HtmlService.createTemplateFromFile('Index').evaluate().setTitle('Scouts QR').addMetaTag('viewport','width=device-width,initial-scale=1');}
+// ---------- Web API (the frontend is hosted on GitHub Pages and calls this with fetch POST) ----------
+// Request body (sent as text/plain so browsers skip the CORS preflight that Apps Script cannot answer):
+//   {"fn":"<name in API>","args":{...},"key":"<access code>"}
+// Response: {"ok":true,"data":...}  or  {"ok":false,"error":{"code":"...","message":"..."}}  (always JSON, HTTP 200)
+// The access code lives ONLY in Project Settings > Script properties > ACCESS_CODE (never in this file).
+function json_(o){return ContentService.createTextOutput(JSON.stringify(o)).setMimeType(ContentService.MimeType.JSON);}
+function fail_(code,message){return json_({ok:false,error:{code:code,message:message}});}
+function accessOk_(key){
+ const expected=PropertiesService.getScriptProperties().getProperty('ACCESS_CODE');
+ if(!expected)return 'NOT_CONFIGURED';
+ const a=String(key||''),b=String(expected);let diff=a.length^b.length;
+ for(let i=0;i<Math.max(a.length,b.length);i++)diff|=(a.charCodeAt(i)||0)^(b.charCodeAt(i)||0);
+ if(diff!==0){Utilities.sleep(800);return 'UNAUTHORIZED';} // slows down guessing
+ return 'OK';}
+function doGet(){return json_({ok:true,service:'scouts-qr-api',message:'Backend is running. The app itself is hosted on GitHub Pages.'});}
 function doPost(e){
- let p;
- try{p=JSON.parse(e&&e.postData&&e.postData.contents||'');}
- catch(_){return ContentService.createTextOutput(JSON.stringify({ok:false,error:{code:'INVALID_JSON',message:'Request body must be valid JSON'}})).setMimeType(ContentService.MimeType.JSON);}
- const result=api('submit',p);
- return ContentService.createTextOutput(JSON.stringify(result)).setMimeType(ContentService.MimeType.JSON);
+ try{
+  let p;
+  try{p=JSON.parse(e&&e.postData&&e.postData.contents||'');}catch(_){return fail_('INVALID_JSON','Request body must be valid JSON');}
+  if(!p||typeof p!=='object'||typeof p.fn!=='string')return fail_('BAD_CALL','Request must contain "fn"');
+  const auth=accessOk_(p.key);
+  if(auth==='NOT_CONFIGURED')return fail_('NOT_CONFIGURED','The server has no ACCESS_CODE yet. Add it under Project Settings > Script properties.');
+  if(auth!=='OK')return fail_('UNAUTHORIZED','Access code required or incorrect');
+  return json_(api(p.fn,p.args));
+ }catch(ex){return fail_('SERVER_ERROR',String(ex&&ex.message||ex));} // never let an HTML error page escape (it has no CORS headers)
 }
 
 // ---------- helpers ----------
@@ -59,6 +80,14 @@ function migrateAndRemoveUnusedSheets_(){
  const as=ss.getSheetByName('Activities'); if(as&&as.getLastRow()>1){const v=as.getDataRange().getValues(),h=v[0],col=h.indexOf('group_id');if(col>=0){for(let i=1;i<v.length;i++){const old=String(v[i][col]||'');if(groupNames[old])v[i][col]=groupNames[old];}as.getRange(1,1,v.length,v[0].length).setValues(v);}}
  if(gs)ss.deleteSheet(gs);const ach=ss.getSheetByName('Achievements');if(ach)ss.deleteSheet(ach);
 }
+// Shared by saveActivity and updateActivity so create and edit enforce identical rules.
+function validateMeeting_(p){
+ const term=String(p.term||'');
+ if(!/^\d{4}-\d{2}-\d{2}$/.test(p.activity_date||''))throw err('INVALID','Choose a valid meeting date (YYYY-MM-DD)');
+ if(!/^(Spring|Fall|Summer) \d{4}$/.test(term))throw err('INVALID','Choose a season and year, such as Spring 2026');
+ {const y=Number(term.slice(-4));if(y<2000||y>2100)throw err('INVALID','Enter a reasonable four-digit year (2000-2100)');}
+ const unit=String(p.group_id||'');if(unit!=='ALL'&&!['Orion','Polaris'].includes(unit))throw err('INVALID','Choose Orion or Polaris');
+ return {term:term,unit:unit};}
 function act_(id){const a=read_('Activities').find(x=>x.activity_id===id);if(!a)throw err('NOT_FOUND','Activity not found');a.term=termForActivity_(a);a.activity_name=meetingName_(a);return a;}
 function mem_(id){const m=read_('Members').find(x=>x.member_id===id);if(!m)throw err('NOT_FOUND','Member not found');return m;}
 const elig_=(a,m,g)=>isOn(m.active)&&['Orion','Polaris'].includes(String(m.unit||m.group_id))&&(a.group_id==='ALL'||a.group_id===String(m.unit||m.group_id));
@@ -141,6 +170,19 @@ function normalizeMemberIds_(){
   if(code&&codeCol)sh_('Members').getRange(m._row,codeCol).setValue(code);
  });
 }
+function normAr_(s){return String(s==null?'':s).replace(/[\u064B-\u065F\u0670\u0640]/g,'').replace(/[أإآٱ]/g,'ا').replace(/ى/g,'ي').replace(/ة/g,'ه').replace(/\s+/g,' ').trim().toLowerCase();}
+const UNIT_ALIASES_={'orion':'Orion','اوريون':'Orion','polaris':'Polaris','بولاريس':'Polaris'};
+function unitCanon_(raw){return UNIT_ALIASES_[normAr_(raw)]||'';}
+// Finds the troop (and its unit). With a unit it only searches that unit; without one the troop name identifies the unit.
+function troopCanon_(raw,unit){const n=normAr_(raw);const units=unit?[unit]:Object.keys(TROOPS_);for(const u of units){const t=(TROOPS_[u]||[]).find(x=>normAr_(x)===n);if(t)return {unit:u,troop:t};}return null;}
+// Shared create/update logic for one member (callers hold the script lock).
+function memberUpsert_(p){const n=String(p.full_name||'').trim();if(!n)throw err('INVALID','Name required');if(!['Orion','Polaris'].includes(String(p.unit||'')))throw err('INVALID','Choose Orion or Polaris');if(!(TROOPS_[String(p.unit)]||[]).includes(String(p.troop||'')))throw err('INVALID','Choose a valid troop for the selected unit');const unitGroup=unitGroup_(String(p.unit));
+  const ex=p.member_id&&read_('Members').find(m=>m.member_id===p.member_id);if(p.member_id&&!ex)throw err('NOT_FOUND','Member');
+  const o=ex||{member_id:nextMemberId_(),qr_token:(Utilities.getUuid()+Utilities.getUuid()).replace(/-/g,''),created_at:now_()}; // generated once; stable on edits
+  Object.assign(o,{member_id:o.member_id,member_code:o.member_id,full_name:n,group_id:unitGroup.group_id,year:String(p.year||''),contact_info:String(p.contact_info||''),active:b_(p.active),updated_at:now_(),
+   unit:String(p.unit||''),troop:String(p.troop||''),phone_number:String(p.phone_number||''),national_id:String(p.national_id||''),
+   mother_phone:String(p.mother_phone||''),father_phone:String(p.father_phone||''),notes:String(p.notes||''),birthday_date:String(p.birthday_date||''),location:String(p.location||'')});
+  ex?put_('Members',ex._row,o):add_('Members',o);if(ex)syncMemberNames_(o.member_id,n);return o;}
 function nextMemberId_(){return randomMemberCode_();}
 
 // ---------- setup (run once from the editor) ----------
@@ -157,8 +199,8 @@ function setup(){
  if(!r){r=ss_().insertSheet('Report');const v=[['Attendance status','Count']];
   ATT.forEach((a,i)=>v.push([a[1],'=COUNTIF(Attendance!E:E,A'+(i+2)+')']));
   v.push(['','']);v.push(['Uniform','Count']);UNI.forEach(x=>v.push([x,'=COUNTIF(Attendance!F:F,A'+(v.length+1)+')']));
-  v.push(['','']);v.push(['قداس / مدارس أحد / اعتراف','أيوه · لأ · لم يُسجّل']);
-  [['قداس','G'],['مدارس أحد','H'],['اعتراف','I']].forEach(p=>{const n=v.length+1;v.push([p[0]].concat(YN.map(y=>'=COUNTIF(Attendance!'+p[1]+':'+p[1]+',"'+y+'")')));});
+  v.push(['','']);v.push(['قداس / مدارس احد / اعتراف','أيوه · لأ · لم يُسجّل']);
+  [['قداس','G'],['مدارس احد','H'],['اعتراف','I']].forEach(p=>{const n=v.length+1;v.push([p[0]].concat(YN.map(y=>'=COUNTIF(Attendance!'+p[1]+':'+p[1]+',"'+y+'")')));});
   r.getRange(1,1,v.length,4).setValues(v.map(x=>{while(x.length<4)x.push('');return x;}));
   r.getRange(1,6).setFormula('=QUERY(PointsLedger!A:J,"select B, sum(D) where B is not null group by B label sum(D) \'points\'",1)');
   r.getRange(1,1,1,2).setFontWeight('bold');}
@@ -171,16 +213,25 @@ function api(fn,p){try{if(!Object.prototype.hasOwnProperty.call(API,fn))throw er
  return {ok:true,data:API[fn](p||{},PUBLIC_USER)};}
  catch(e){return {ok:false,error:{code:e.code||'SERVER_ERROR',message:e.message}};}}
 const API={
+ appUrl:()=>ScriptApp.getService().getUrl(),
  init:()=>({att:ATT,uni:UNI,yn:YN,terms:termOptions_()}),
  listGroups:()=>Object.values(gmap_()),
  listMembers:()=>{const g=gmap_();return read_('Members').map(m=>{m.group_name=g[m.unit||m.group_id]?g[m.unit||m.group_id].group_name:'';return m;});},
- saveMember:(p,u)=>locked_(()=>{const n=String(p.full_name||'').trim();if(!n)throw err('INVALID','Name required');if(!['Orion','Polaris'].includes(String(p.unit||'')))throw err('INVALID','Choose Orion or Polaris');if(!(TROOPS_[String(p.unit)]||[]).includes(String(p.troop||'')))throw err('INVALID','Choose a valid troop for the selected unit');const unitGroup=unitGroup_(String(p.unit));
-  const ex=p.member_id&&read_('Members').find(m=>m.member_id===p.member_id);if(p.member_id&&!ex)throw err('NOT_FOUND','Member');
-  const o=ex||{member_id:nextMemberId_(),qr_token:(Utilities.getUuid()+Utilities.getUuid()).replace(/-/g,''),created_at:now_()}; // generated once; stable on edits
-  Object.assign(o,{member_id:o.member_id,member_code:o.member_id,full_name:n,group_id:unitGroup.group_id,year:String(p.year||''),contact_info:String(p.contact_info||''),active:b_(p.active),updated_at:now_(),
-   unit:String(p.unit||''),troop:String(p.troop||''),phone_number:String(p.phone_number||''),national_id:String(p.national_id||''),
-   mother_phone:String(p.mother_phone||''),father_phone:String(p.father_phone||''),notes:String(p.notes||''),birthday_date:String(p.birthday_date||''),location:String(p.location||'')});
-  ex?put_('Members',ex._row,o):add_('Members',o);syncMemberNames_(o.member_id,n);return o;}),
+ saveMember:(p,u)=>locked_(()=>memberUpsert_(p)),
+ importMembers:(p,u)=>locked_(()=>{ // bulk add from a parsed Excel/CSV file; the client sends small chunks
+  const rows=Array.isArray(p.rows)?p.rows:[];if(rows.length>50)throw err('INVALID','Too many rows in one request');
+  const keys=new Set(read_('Members').map(m=>normAr_(m.full_name)+'|'+m.unit)),res={added:0,duplicates:[],errors:[]};
+  rows.forEach(r=>{const name=String(r.full_name||'').trim();
+   try{if(!name)throw err('INVALID','Name required');
+    const rawUnit=String(r.unit||'').trim(),rawTroop=String(r.troop||'').trim();let unit=unitCanon_(rawUnit);
+    if(rawUnit&&!unit)throw err('INVALID','Unknown unit "'+rawUnit+'" (use Orion or Polaris)');
+    if(!rawTroop)throw err('INVALID','Troop required');
+    const t=troopCanon_(rawTroop,unit);if(!t)throw err('INVALID','Unknown troop "'+rawTroop+'"'+(unit?' for '+unit:''));unit=t.unit;
+    const key=normAr_(name)+'|'+unit;if(keys.has(key)){res.duplicates.push({row:r.row,name:name});return;}
+    const clean={};['year','birthday_date','location','phone_number','national_id','mother_phone','father_phone','notes'].forEach(k=>clean[k]=String(r[k]==null?'':r[k]).slice(0,500));
+    memberUpsert_(Object.assign(clean,{full_name:name,unit:unit,troop:t.troop,contact_info:clean.phone_number,active:true}));keys.add(key);res.added++;
+   }catch(e){res.errors.push({row:r.row,name:name,message:e.message||String(e)});}});
+  return res;}),
  deleteMember:(p,u)=>locked_(()=>{const id=String(p.member_id||'');if(!id)throw err('INVALID','Member is required');const m=read_('Members').find(x=>x.member_id===id);if(!m)throw err('NOT_FOUND','Member not found');deleteRowsBy_('Attendance','member_id',id);deleteRowsBy_('PointsLedger','member_id',id);deleteRowsBy_('Members','member_id',id);return {deleted:true,member_id:id};}),
  deleteActivity:(p,u)=>locked_(()=>{const id=String(p.activity_id||'');if(!id)throw err('INVALID','Meeting is required');const a=read_('Activities').find(x=>x.activity_id===id);if(!a)throw err('NOT_FOUND','Meeting not found');deleteRowsBy_('Attendance','activity_id',id);deleteRowsBy_('PointsLedger','activity_id',id);deleteRowsBy_('Activities','activity_id',id);return {deleted:true,activity_id:id};}),
  deleteAttendance:(p,u)=>locked_(()=>{const id=String(p.attendance_id||'');if(!id)throw err('INVALID','Attendance record is required');const r=read_('Attendance').find(x=>x.attendance_id===id);if(!r)throw err('NOT_FOUND','Attendance record not found');deleteRowsBy_('Attendance','attendance_id',id); // retain manually awarded points; remove only auto attendance transactions for this meeting
@@ -206,24 +257,24 @@ const API={
     missing_count:rows.filter(r=>!r.attendance).length,status_counts:statusCounts,rows:rows};
  },
  girlAnalytics:(p)=>{
-  const m=mem_(p.member_id), groups=gmap_(), term=String(p.term||'All'), today=Utilities.formatDate(new Date(),Session.getScriptTimeZone(),'yyyy-MM-dd'), allActs=read_('Activities').filter(a=>(a.group_id==='ALL'||a.group_id===m.group_id)&&(String(a.activity_date).slice(0,10)<=today||['finalized','closed'].includes(a.status))&&(term==='All'||termForActivity_(a)===term))
+  const m=mem_(p.member_id), groups=gmap_(), term=String(p.term||'All'), today=Utilities.formatDate(new Date(),Session.getScriptTimeZone(),'yyyy-MM-dd'), allActs=read_('Activities').filter(a=>(a.group_id==='ALL'||a.group_id===m.group_id)&&(String(a.activity_date).slice(0,10)<=today||['finalized','closed'].includes(a.status))&&termMatches_(a,term))
     .sort((a,b)=>String(b.activity_date).localeCompare(String(a.activity_date)));
   const validActivityIds=new Set(allActs.map(a=>a.activity_id));
   const allAtt=read_('Attendance').filter(r=>r.member_id===m.member_id&&validActivityIds.has(r.activity_id)), byAct={};allAtt.forEach(r=>byAct[r.activity_id]=r);
   const history=allActs.map(a=>{const r=byAct[a.activity_id]||null;return {activity_id:a.activity_id,activity_name:a.activity_name,activity_date:a.activity_date,
-    activity_status:a.status,attendance_status_code:r?r.attendance_status_code:'',attendance_status_label:r?r.attendance_status_label:'لم يُسجّل',
+    activity_status:a.status,attendance_id:r?r.attendance_id:'',attendance_status_code:r?r.attendance_status_code:'',attendance_status_label:r?r.attendance_status_label:'لم يُسجّل',
     uniform_status:r?r.uniform_status:'',mass_participation:r?r.mass_participation:NA,
     sunday_school_participation:r?r.sunday_school_participation:NA,confession_participation:r?r.confession_participation:NA,
     notes:r?r.notes:'',recorded:!!r};});
   const counts={};ATT.forEach(x=>counts[x[1]]=0);allAtt.forEach(r=>{if(r.attendance_status_label)counts[r.attendance_status_label]=(counts[r.attendance_status_label]||0)+1;});
-  const onTime=allAtt.filter(r=>r.attendance_status_code==='S1').length, late=0,
-    absences=allAtt.filter(r=>['S2','S3','S4','S5','S6','S7'].includes(r.attendance_status_code)).length, total=allActs.length;
+  const onTime=allAtt.filter(r=>r.attendance_status_code==='S1').length, late=0, attended=allAtt.filter(r=>ATTENDED_.includes(r.attendance_status_code)).length,
+    absences=allAtt.filter(r=>ABSENT_.includes(r.attendance_status_code)).length, total=allActs.length;
   const points=read_('PointsLedger').filter(x=>x.member_id===m.member_id).reduce((n,x)=>n+Number(x.points_delta||0),0); // Lifetime total across all terms
-  const recorded=allActs.filter(a=>byAct[a.activity_id]).length, pct=total?Math.round((onTime/total)*1000)/10:0;
+  const recorded=allActs.filter(a=>byAct[a.activity_id]).length, pct=total?Math.round((attended/total)*1000)/10:0;
   const className=pct>=80?'A':pct>=60?'B':'C';
   const yes=v=>v==='أيوه';
   return {member:{member_id:m.member_id,member_code:m.member_code||m.member_id,full_name:m.full_name,group_name:groups[m.unit||m.group_id]?groups[m.unit||m.group_id].group_name:'',year:m.year,active:m.active,unit:m.unit||'',troop:m.troop||'',phone_number:m.phone_number||'',national_id:m.national_id||'',mother_phone:m.mother_phone||'',father_phone:m.father_phone||'',notes:m.notes||'',birthday_date:m.birthday_date||'',location:m.location||''},
-   total_meetings:total,recorded_meetings:recorded,missing_records:Math.max(0,total-recorded),on_time:onTime,late:late,absences:absences,
+   total_meetings:total,recorded_meetings:recorded,missing_records:Math.max(0,total-recorded),attended:attended,on_time:onTime,late:late,absences:absences,
    attendance_percent:pct,class_name:className,watch_status:absences>=3?'يحتاج متابعة':'منتظم',total_points:points,
    uniform_compliance:allAtt.filter(r=>r.uniform_status==='التزام بالزي').length,
    mass_yes:allAtt.filter(r=>yes(r.mass_participation)).length,sunday_yes:allAtt.filter(r=>yes(r.sunday_school_participation)).length,
@@ -234,22 +285,23 @@ const API={
   const term=String((p&&p.term)||'All'),members=read_('Members'),activities=read_('Activities'),attendance=read_('Attendance'),ledger=read_('PointsLedger'),groups=gmap_();
   const today=Utilities.formatDate(new Date(),Session.getScriptTimeZone(),'yyyy-MM-dd');
   return members.map(m=>{
-   const acts=activities.filter(a=>(a.group_id==='ALL'||a.group_id===m.group_id)&&(String(a.activity_date).slice(0,10)<=today||['finalized','closed'].includes(a.status))&&(term==='All'||termForActivity_(a)===term));
+   const acts=activities.filter(a=>(a.group_id==='ALL'||a.group_id===m.group_id)&&(String(a.activity_date).slice(0,10)<=today||['finalized','closed'].includes(a.status))&&termMatches_(a,term));
    const ids=new Set(acts.map(a=>a.activity_id)), at=attendance.filter(r=>r.member_id===m.member_id&&ids.has(r.activity_id));
-   const onTime=at.filter(r=>r.attendance_status_code==='S1').length,late=0;
-   const absences=at.filter(r=>['S2','S3','S4','S5','S6','S7'].includes(r.attendance_status_code)).length;
-   const recorded=new Set(at.map(r=>r.activity_id)).size, pct=acts.length?Math.round((onTime/acts.length)*1000)/10:0;
+   const onTime=at.filter(r=>r.attendance_status_code==='S1').length,late=0,attended=at.filter(r=>ATTENDED_.includes(r.attendance_status_code)).length;
+   const absences=at.filter(r=>ABSENT_.includes(r.attendance_status_code)).length;
+   const recorded=new Set(at.map(r=>r.activity_id)).size, pct=acts.length?Math.round((attended/acts.length)*1000)/10:0;
    return {member_id:m.member_id,member_code:m.member_code||m.member_id,full_name:m.full_name,unit:m.unit||'',troop:m.troop||'',birthday_date:m.birthday_date||'',location:m.location||'',group_name:groups[m.unit||m.group_id]?groups[m.unit||m.group_id].group_name:'',
-    total_meetings:acts.length,recorded_meetings:recorded,attended:onTime+late,on_time:onTime,late:late,absences:absences,attendance_percent:pct,
+    total_meetings:acts.length,recorded_meetings:recorded,attended:attended,on_time:onTime,late:late,absences:absences,attendance_percent:pct,
     total_points:ledger.filter(x=>x.member_id===m.member_id).reduce((n,x)=>n+Number(x.points_delta||0),0),class_name:pct>=80?'A':pct>=60?'B':'C',watch_status:absences>=3?'يحتاج متابعة':'منتظم',active:m.active};
   }).sort((a,b)=>a.full_name.localeCompare(b.full_name));
  },
  listPointsLedger:()=>{const ms={};read_('Members').forEach(m=>ms[m.member_id]=m.full_name);const acts={};read_('Activities').forEach(a=>acts[a.activity_id]=a.activity_name+' · '+a.activity_date);return read_('PointsLedger').map(r=>Object.assign({},r,{member_name:ms[r.member_id]||r.member_name||'Unknown girl',activity_name:acts[r.activity_id]||''})).sort((a,b)=>String(b.created_at).localeCompare(String(a.created_at)));},
- saveActivity:(p,u)=>locked_(()=>{ensureHeaders_('Activities');const term=String(p.term||'');
-  if(!/^\d{4}-\d{2}-\d{2}$/.test(p.activity_date||''))throw err('INVALID','Choose a valid meeting date (YYYY-MM-DD)');
-  if(!/^(Spring|Fall|Summer) \d{4}$/.test(term))throw err('INVALID','Choose a season and year, such as Spring 2026');
-  if(p.group_id!=='ALL'&&!['Orion','Polaris'].includes(String(p.group_id)))throw err('INVALID','Choose Orion or Polaris');
-  const unit=p.group_id==='ALL'?'ALL':String(p.group_id||'');if(unit!=='ALL'&&!['Orion','Polaris'].includes(unit))throw err('INVALID','Choose Orion or Polaris');const o={activity_id:id_('ACT'),activity_name:'',activity_type:'Weekly meeting',activity_date:p.activity_date,group_id:unit,term:term,status:'open',created_at:now_(),created_by:u.email};o.activity_name=meetingName_(o);add_('Activities',o);return o;}),
+ saveActivity:(p,u)=>locked_(()=>{ensureHeaders_('Activities');const v=validateMeeting_(p);
+  const o={activity_id:id_('ACT'),activity_name:'',activity_type:'Weekly meeting',activity_date:p.activity_date,group_id:v.unit,term:v.term,status:'open',created_at:now_(),created_by:u.email};o.activity_name=meetingName_(o);add_('Activities',o);return o;}),
+ updateActivity:(p,u)=>locked_(()=>{ensureHeaders_('Activities');const id=String(p.activity_id||'');if(!id)throw err('INVALID','Meeting is required');
+  const a=read_('Activities').find(x=>x.activity_id===id);if(!a)throw err('NOT_FOUND','Meeting not found');const v=validateMeeting_(p);
+  if(v.unit!==String(a.group_id)&&read_('Attendance').some(r=>r.activity_id===id))throw err('HAS_ATTENDANCE','This meeting already has attendance records, so its unit cannot be changed. Delete those records first, or create a new meeting.');
+  a.activity_date=p.activity_date;a.group_id=v.unit;a.term=v.term;a.activity_name=meetingName_(a);put_('Activities',a._row,a);return a;}),
  eligible:(p)=>{const a=act_(p.activity_id),g=gmap_(),at={};read_('Attendance').filter(r=>r.activity_id===a.activity_id).forEach(r=>at[r.member_id]=r);
   return read_('Members').filter(m=>elig_(a,m,g)).map(m=>({member_id:m.member_id,member_code:m.member_code||m.member_id,full_name:m.full_name,unit:m.unit||'',troop:m.troop||'',group_name:m.unit||m.group_id,att:at[m.member_id]||null}));},
  byToken:(p,u)=>{const t=String(p.token||'').trim(),m=t&&read_('Members').find(x=>x.qr_token===t);if(!m)throw err('INVALID_TOKEN','Unknown QR code');
@@ -263,7 +315,7 @@ const API={
   if(!isOn(m.active))throw err('MEMBER_INACTIVE','Member is inactive');
   if(!elig_(a,m,gmap_()))throw err('NOT_ELIGIBLE','Member not eligible for this activity');
   const st=ATT.find(x=>x[0]===p.attendance_status_code);if(!st)throw err('INVALID','Attendance status required');
-  if(UNI.indexOf(p.uniform_status)<0)throw err('INVALID','Uniform status required');
+  const uniform=String(p.uniform_status||'');if(uniform&&UNI.indexOf(uniform)<0)throw err('INVALID','Bad uniform status'); // uniform is optional
   const part=k=>{const v=(p[k]===undefined||p[k]==='')?NA:p[k];if(YN.indexOf(v)<0)throw err('INVALID','Bad value: '+k);return v;};
   const recordedAt=p.scanned_at?new Date(p.scanned_at):new Date();if(isNaN(recordedAt.getTime()))throw err('INVALID','Bad scan timestamp');
   const mass=part('mass_participation'),sun=part('sunday_school_participation'),conf=part('confession_participation');
@@ -275,7 +327,7 @@ const API={
   const target=target_(st[0]); // throws before any write if rule unconfigured
   const o=ex||{attendance_id:id_('A'),member_id:m.member_id,member_name:m.full_name,activity_id:a.activity_id,recorded_at:recordedAt.toISOString().slice(0,19)+'Z',recorded_by:u.email};
   o.member_name=m.full_name;
-  Object.assign(o,{attendance_status_code:st[0],attendance_status_label:st[1],uniform_status:p.uniform_status,mass_participation:mass,sunday_school_participation:sun,confession_participation:conf,notes:String(p.notes||'').slice(0,500),updated_at:now_(),updated_by:u.email,member_name:m.full_name});
+  Object.assign(o,{attendance_status_code:st[0],attendance_status_label:st[1],uniform_status:uniform,mass_participation:mass,sunday_school_participation:sun,confession_participation:conf,notes:String(p.notes||'').slice(0,500),updated_at:now_(),updated_by:u.email,member_name:m.full_name});
   ex?put_('Attendance',ex._row,o):add_('Attendance',o);
   reconcile_(m.member_id,a.activity_id,target,st[0],u);
   return {attendance_id:o.attendance_id};}),

@@ -4,3 +4,19 @@ data/
 *.db-wal
 *.db-shm
 .env
+
+
+# --- added for GitHub Pages / Apps Script deployment ---
+.env.*
+!.env.example
+.clasp.json
+.clasprc.json
+credentials*.json
+service-account*.json
+*.pem
+*.key
+*.log
+.DS_Store
+Thumbs.db
+.vscode/
+test-output/

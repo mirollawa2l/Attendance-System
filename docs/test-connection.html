@@ -1,0 +1,45 @@
+<!DOCTYPE html>
+<html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Scouts QR · Connection test</title>
+<style>
+body{margin:0;padding:20px;font:16px/1.5 system-ui,"Segoe UI",sans-serif;background:#f1f8f2;color:#173c2c}
+main{max-width:640px;margin:auto}h1{color:#185b35;font-size:22px}
+.card{background:#fff;border:1px solid #d7e8da;border-radius:14px;padding:14px 16px;margin:12px 0}
+.ok{color:#18794e;font-weight:700}.no{color:#b42318;font-weight:700}.wait{color:#5d7666}
+code{background:#e5f4e8;padding:1px 5px;border-radius:5px;word-break:break-all}
+input,button{font:inherit;padding:9px 12px;border-radius:10px;border:1px solid #d1e6d5}button{background:#237447;color:#fff;border:0;cursor:pointer}
+</style></head><body><main>
+<h1>Connection test</h1>
+<p>Run this page from your real GitHub Pages address. It checks whether this website can talk to the Apps Script backend. It never changes any data.</p>
+<div class="card"><b>Backend URL</b><br><code id="url"></code></div>
+<div class="card" id="t1"><b>1. Backend reachable and public (GET)</b><br><span class="wait">waiting…</span></div>
+<div class="card" id="t2"><b>2. Browser can POST and read the answer (CORS + redirect)</b><br><span class="wait">waiting…</span></div>
+<div class="card" id="t3"><b>3. Your access code works (optional)</b><br>
+  <input id="code" type="password" placeholder="Access code"> <button id="go" type="button">Test code</button><br><span id="r3" class="wait">not run</span></div>
+<button id="again" type="button">Run checks again</button>
+<script src="config.js"></script>
+<script>
+const $=s=>document.querySelector(s), U=(window.SCOUTS_CONFIG||{}).API_URL||'';
+$('#url').textContent=U||'(not set — edit docs/config.js)';
+const show=(id,ok,msg)=>{const el=id==='r3'?$('#r3'):$('#'+id+' span');el.className=ok?'ok':'no';el.textContent=(ok?'PASS — ':'FAIL — ')+msg;};
+const post=async(key)=>{const r=await fetch(U,{method:'POST',mode:'cors',redirect:'follow',credentials:'omit',cache:'no-store',headers:{'Content-Type':'text/plain;charset=utf-8'},body:JSON.stringify({fn:'init',args:{},key:key})});const t=await r.text();try{return JSON.parse(t);}catch(_){return {html:true,text:t.slice(0,80)};}};
+const html='The backend returned a web page, not data. In Apps Script: Deploy > Manage deployments > edit > Version "New version" > Deploy; Execute as "Me"; Who has access "Anyone".';
+async function run(){
+  ['t1','t2'].forEach(i=>{$('#'+i+' span').className='wait';$('#'+i+' span').textContent='running…';});
+  if(!U||/PASTE_|YOUR_/.test(U)){show('t1',false,'API_URL is not set in config.js.');show('t2',false,'Fix step 1 first.');return;}
+  try{const r=await fetch(U,{cache:'no-store',credentials:'omit'});const t=await r.text();let j;try{j=JSON.parse(t);}catch(_){}
+    if(j&&j.service==='scouts-qr-api')show('t1',true,'the new backend code is live and answers publicly.');
+    else if(j)show('t1',false,'answered JSON but not from the expected service.');
+    else show('t1',false,/<html|<!doctype/i.test(t)?'got a web page. The OLD backend version is still deployed (or access is not "Anyone"). Redeploy a New version.':'unreadable answer.');
+  }catch(e){show('t1',false,'the browser could not read the answer ('+e.message+'). Likely the URL is wrong, access is not "Anyone", or the redirect lacks CORS headers.');}
+  try{const j=await post('');
+    if(j.html)show('t2',false,html);
+    else if(j.error&&j.error.code==='UNAUTHORIZED')show('t2',true,'POST, redirect and CORS all work, and the server correctly refuses requests without the access code.');
+    else if(j.error&&j.error.code==='NOT_CONFIGURED')show('t2',true,'POST and CORS work. But the server has no ACCESS_CODE yet: add it in Apps Script > Project Settings > Script properties.');
+    else if(j.ok)show('t2',false,'The server answered WITHOUT an access code. Data is exposed. Redeploy the new Code.gs and set ACCESS_CODE.');
+    else show('t2',false,'unexpected answer: '+JSON.stringify(j).slice(0,120));
+  }catch(e){show('t2',false,'the browser blocked or could not complete the POST ('+e.message+'). This is the CORS/redirect problem; see DEPLOYMENT.md > Troubleshooting.');}
+}
+$('#go').onclick=async()=>{$('#r3').className='wait';$('#r3').textContent='running…';try{const j=await post($('#code').value);if(j.ok)show('r3',true,'the access code is accepted.');else if(j.html)show('r3',false,html);else show('r3',false,(j.error&&j.error.message)||'rejected');}catch(e){show('r3',false,e.message);}};
+$('#again').onclick=run;run();
+</script></main></body></html>
