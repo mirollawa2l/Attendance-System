@@ -1,0 +1,7 @@
+{
+  "name": "scouts-qr-tests",
+  "private": true,
+  "description": "Backend (Code.gs on an in-memory Sheets emulation) and static checks. Run: npm install && npm test",
+  "scripts": { "test": "node --test backend.test.js static.test.js" },
+  "devDependencies": { "acorn": "^8.12.0" }
+}
