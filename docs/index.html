@@ -397,7 +397,7 @@ VIEWS.members=async()=>{const [ms,gs]=await Promise.all([call('listMembers'),cal
 document.querySelectorAll('[data-q]').forEach(b => {
   b.onclick = async () => {
     const m = ms.find(
-      x => String(x.member_id) === String(b.dataset.q)
+      x => String(x.member_code) === String(b.dataset.q)
     );
 
     if (!m) {
