@@ -393,7 +393,26 @@ VIEWS.members=async()=>{const [ms,gs]=await Promise.all([call('listMembers'),cal
  <input id=imp-file type=file accept=".xlsx,.xlsm,.csv,.tsv,.txt,text/csv,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet" hidden aria-label="Choose an Excel or CSV file of members"><div id=imp-box></div>`;
  const draw=()=>{const q=$('#q').value.toLowerCase();$('#res').innerHTML=ms.filter(m=>[m.full_name,m.member_code,m.member_id,m.unit,m.troop,m.phone_number,m.group_name,m.location].join(' ').toLowerCase().includes(q)).map(m=>`<div class=row><b dir=auto>${esc(m.full_name)}</b><br><small>ID: ${esc(m.member_code||m.member_id)} · ${esc(m.unit||'—')} · ${esc(m.troop||'—')} · ${esc(m.phone_number||'—')} ${on(m.active)?'':'(Inactive)'}</small><br><button class=sec data-e="${esc(m.member_id)}">Edit</button> <button class=sec data-q="${esc(m.member_id)}">QR code</button> <button class=sec data-del-member="${esc(m.member_id)}">Delete</button></div>`).join('');
   document.querySelectorAll('[data-e]').forEach(b=>b.onclick=()=>{const m=ms.find(x=>x.member_id===b.dataset.e);$('#mi').value=m.member_id;$('#mn').value=m.full_name||'';$('#generated-id').textContent='Member ID: '+(m.member_id||m.member_code)+' (generated automatically)';$('#mu').value=m.unit||'';fillTroops(m.troop||'');$('#my').value=m.year||'';$('#mbday').value=String(m.birthday_date||'').slice(0,10);$('#mloc').value=m.location||'';$('#mp').value=m.phone_number||m.contact_info||'';$('#mnid').value=m.national_id||'';$('#mom').value=m.mother_phone||'';$('#dad').value=m.father_phone||'';$('#mnotes').value=m.notes||'';$('#ma').checked=on(m.active);});
-  document.querySelectorAll('[data-q]').forEach(b=>b.onclick=()=>{const m=ms.find(x=>x.member_id===b.dataset.q);showMemberQrCard(m).catch(e=>note(e.message,1));});
+
+document.querySelectorAll('[data-q]').forEach(b => {
+  b.onclick = async () => {
+    const m = ms.find(
+      x => String(x.member_id) === String(b.dataset.q)
+    );
+
+    if (!m) {
+      note('Member not found. Please refresh the Members page.', 1);
+      return;
+    }
+
+    try {
+      await showMemberQrCard(m);
+    } catch (e) {
+      console.error('QR code error:', e);
+      note(e?.message || 'Could not display QR code.', 1);
+    }
+  };
+});
   document.querySelectorAll('[data-del-member]').forEach(b=>b.onclick=()=>{const m=ms.find(x=>x.member_id===b.dataset.delMember);if(m)removeRecord('member',m.member_id,'Delete '+m.full_name+' and all of her attendance/points history? This cannot be undone.','Member and related history deleted.',()=>go('members'));});};
  let pendingImport=null;
  $('#imp-choose').onclick=()=>$('#imp-file').click();
